@@ -20,6 +20,8 @@ const reloadButton = document.querySelector("#reload-btn");
 const template = document.querySelector("#message-template");
 
 function restoreSettings() {
+  const serverGroundedDefault = state.sidebar.default_grounded_provider || "typhoon";
+  const serverConversationDefault = state.sidebar.default_conversation_provider || "typhoon";
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     typhoonApiKeyInput.value = saved.typhoon_api_key || "";
@@ -27,12 +29,16 @@ function restoreSettings() {
     topKInput.value = String(saved.top_k || 5);
     temperatureInput.value = String(saved.temperature ?? 0.2);
     groundedProviderInput.value =
-      saved.grounded_provider || state.sidebar.default_grounded_provider || "auto";
+      saved.grounded_provider && saved.grounded_provider !== "auto"
+        ? saved.grounded_provider
+        : serverGroundedDefault;
     conversationProviderInput.value =
-      saved.conversation_provider || state.sidebar.default_conversation_provider || "auto";
+      saved.conversation_provider && saved.conversation_provider !== "auto"
+        ? saved.conversation_provider
+        : serverConversationDefault;
   } catch {
-    groundedProviderInput.value = state.sidebar.default_grounded_provider || "auto";
-    conversationProviderInput.value = state.sidebar.default_conversation_provider || "auto";
+    groundedProviderInput.value = serverGroundedDefault;
+    conversationProviderInput.value = serverConversationDefault;
   }
 }
 
