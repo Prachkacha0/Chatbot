@@ -562,7 +562,7 @@ def answer_question(
                 )
                 provider_name = candidate_name
                 break
-            except (APIError, AuthenticationError, gemini_errors.ClientError):
+            except (APIError, AuthenticationError, gemini_errors.APIError):
                 continue
 
         if not answer:
@@ -622,7 +622,7 @@ def answer_question(
                     "mode": "conversation",
                     "provider_used": candidate_name,
                 }
-        except (APIError, AuthenticationError, gemini_errors.ClientError):
+        except (APIError, AuthenticationError, gemini_errors.APIError):
             continue
 
     return {

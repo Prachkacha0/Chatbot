@@ -128,7 +128,7 @@ async def chat(payload: ChatRequest) -> dict:
         raise HTTPException(status_code=401, detail=f"Typhoon authentication failed: {exc}") from exc
     except APIError as exc:
         raise HTTPException(status_code=502, detail=f"Typhoon API error: {exc}") from exc
-    except gemini_errors.ClientError as exc:
+    except gemini_errors.APIError as exc:
         raise HTTPException(status_code=502, detail=f"Gemini API error: {exc}") from exc
 
     return result
