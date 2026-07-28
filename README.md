@@ -56,6 +56,46 @@ Open:
 http://localhost:5001
 ```
 
+## Deploy
+
+This app is a dynamic FastAPI service, so it cannot run on GitHub Pages.
+Use a Python app host such as Render or Railway instead.
+
+### Render
+
+1. Push this repository to GitHub.
+2. In Render, create a new `Web Service` from the repo.
+3. Render can read [`render.yaml`](./render.yaml) automatically, or you can set:
+
+```text
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+Health Check Path: /health
+```
+
+4. Add environment variables from `.env.example`, especially:
+
+```text
+TYPHOON_API_KEY=...
+GEMINI_API_KEY=...
+GROUNDED_PROVIDER=auto
+CONVERSATION_PROVIDER=auto
+TYPHOON_MODEL=typhoon-v2.1-12b-instruct
+GEMINI_MODEL=gemini-3.5-flash
+TOP_K=5
+MIN_RELEVANCE=0.05
+```
+
+5. Deploy, then open the generated Render URL.
+
+### Important note about `data/`
+
+The knowledge base is loaded from the local `data/` folder inside the deployed app.
+If you change documents later, you need to either:
+
+- commit the updated files to GitHub and redeploy, or
+- add persistent storage / an upload flow
+
 ## Supported files
 
 - `.txt`

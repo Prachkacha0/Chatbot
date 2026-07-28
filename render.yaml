@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: chatbot-research
+    plan: free
+    runtime: python
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: GROUNDED_PROVIDER
+        value: auto
+      - key: CONVERSATION_PROVIDER
+        value: auto
+      - key: TYPHOON_MODEL
+        value: typhoon-v2.1-12b-instruct
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: TOP_K
+        value: "5"
+      - key: MIN_RELEVANCE
+        value: "0.05"
+      - key: TYPHOON_BASE_URL
+        value: https://api.opentyphoon.ai/v1
+      - key: TYPHOON_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
