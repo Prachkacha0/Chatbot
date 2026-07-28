@@ -1,0 +1,31 @@
+ChatBot-Research — Sample Knowledge Base
+========================================
+
+This is a sample reference document. Replace it (and add more files) with your
+own .txt, .md, .json, or .pdf documents. The chatbot answers ONLY from the files
+in this /data folder.
+
+Project facts
+-------------
+- The application is named "ChatBot-Research".
+- It runs locally on port 5001.
+- It uses a Retrieval-Augmented Generation (RAG) approach: it retrieves the most
+  relevant passages from these documents and injects them into the model as
+  strict context.
+- If an answer cannot be found in these documents, the assistant replies:
+  "I don't know based on the provided documents."
+
+Supported file types
+--------------------
+The chatbot can read the following files placed in the /data folder:
+- Plain text (.txt)
+- Markdown (.md)
+- JSON (.json)
+- PDF (.pdf)
+
+Example Q&A you can try
+-----------------------
+- "What port does the application run on?"  -> 5001
+- "What file types are supported?"          -> .txt, .md, .json, .pdf
+- "What happens if the answer is not in the documents?"
+      -> It replies that it does not know based on the provided documents.

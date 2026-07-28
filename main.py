@@ -1,0 +1,145 @@
+from __future__ import annotations
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
+
+from rag_service import (
+    APIError,
+    APP_DIR,
+    AuthenticationError,
+    DATA_DIR,
+    KnowledgeBase,
+    PROVIDERS,
+    Settings,
+    answer_question,
+    gemini_errors,
+    resolve_api_key,
+)
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    typhoon_api_key: str | None = None
+    gemini_api_key: str | None = None
+    top_k: int | None = Field(default=None, ge=1, le=10)
+    temperature: float = Field(default=0.2, ge=0.0, le=1.0)
+    history: list[dict[str, str]] = Field(default_factory=list)
+    grounded_provider: str | None = None
+    conversation_provider: str | None = None
+
+
+app = FastAPI(title="ChatBot-Research Web", version="2.0.0")
+templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
+kb = KnowledgeBase()
+
+static_dir = APP_DIR / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+
+def _sidebar_payload() -> dict:
+    index = kb.current_index()
+    settings: Settings = kb.settings
+    files = [
+        {
+            "source": item.source,
+            "ext": item.ext,
+            "chars": item.chars,
+            "chunks": item.chunks,
+        }
+        for item in index.files
+    ]
+    return {
+        "files": files,
+        "doc_count": len(files),
+        "chunk_count": sum(item["chunks"] for item in files),
+        "char_count": sum(item["chars"] for item in files),
+        "data_dir": str(DATA_DIR),
+        "has_typhoon_key": bool(resolve_api_key("typhoon")),
+        "has_gemini_key": bool(resolve_api_key("gemini")),
+        "default_grounded_provider": settings.default_grounded_provider,
+        "default_conversation_provider": settings.default_conversation_provider,
+        "typhoon_model": settings.typhoon_model,
+        "gemini_model": settings.gemini_model,
+        "providers": list(PROVIDERS),
+    }
+
+
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "request": request,
+            "sidebar": _sidebar_payload(),
+        },
+    )
+
+
+@app.get("/api/status")
+async def status() -> dict:
+    return _sidebar_payload()
+
+
+@app.post("/api/reload")
+async def reload_documents() -> dict:
+    kb.refresh(force=True)
+    return _sidebar_payload()
+
+
+@app.post("/api/chat")
+async def chat(payload: ChatRequest) -> dict:
+    question = payload.message.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Message is required.")
+
+    index = kb.current_index()
+    if not index.files:
+        return {
+            "answer": "ตอนนี้ยังไม่มีเอกสารในระบบครับ กรุณาเพิ่มไฟล์ในโฟลเดอร์ data ก่อน",
+            "passages": [],
+            "elapsed": 0.0,
+            "mode": "no_documents",
+            "provider_used": "local",
+        }
+
+    typhoon_api_key = resolve_api_key("typhoon", payload.typhoon_api_key)
+    gemini_api_key = resolve_api_key("gemini", payload.gemini_api_key)
+
+    try:
+        result = answer_question(
+            kb,
+            question,
+            typhoon_api_key=typhoon_api_key,
+            gemini_api_key=gemini_api_key,
+            top_k=payload.top_k,
+            temperature=payload.temperature,
+            history=payload.history,
+            grounded_provider=payload.grounded_provider,
+            conversation_provider=payload.conversation_provider,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=401, detail=f"Typhoon authentication failed: {exc}") from exc
+    except APIError as exc:
+        raise HTTPException(status_code=502, detail=f"Typhoon API error: {exc}") from exc
+    except gemini_errors.ClientError as exc:
+        raise HTTPException(status_code=502, detail=f"Gemini API error: {exc}") from exc
+
+    return result
+
+
+@app.get("/health")
+async def health() -> dict:
+    payload = _sidebar_payload()
+    return {
+        "status": "ok",
+        "documents": payload["doc_count"],
+        "has_typhoon_key": payload["has_typhoon_key"],
+        "has_gemini_key": payload["has_gemini_key"],
+    }

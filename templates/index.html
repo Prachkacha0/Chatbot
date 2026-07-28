@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatBot-Research</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar">
+        <div class="brand-card">
+          <p class="eyebrow">Hybrid AI + RAG</p>
+          <h1>ChatBot-Research</h1>
+          <p class="lede">
+            ถามคุยทั่วไปได้แบบ AI assistant และเมื่อมีข้อมูลในไฟล์ ระบบจะดึงจากเอกสารมาตอบอย่างชัดเจนพร้อมอ้างอิง
+          </p>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Providers</h2>
+            <span
+              class="status-pill {{ 'online' if sidebar.has_typhoon_key or sidebar.has_gemini_key else 'offline' }}"
+            >
+              {{ 'Server key ready' if sidebar.has_typhoon_key or sidebar.has_gemini_key else 'Need API key' }}
+            </span>
+          </div>
+
+          <div class="provider-grid">
+            <article class="provider-card">
+              <div class="provider-head">
+                <strong>Typhoon</strong>
+                <span class="mini-pill {{ 'online' if sidebar.has_typhoon_key else 'offline' }}">
+                  {{ 'ready' if sidebar.has_typhoon_key else 'empty' }}
+                </span>
+              </div>
+              <p>{{ sidebar.typhoon_model }}</p>
+              <label class="field">
+                <span>Typhoon API Key</span>
+                <input id="typhoon-api-key" type="password" placeholder="sk-..." autocomplete="off" />
+              </label>
+            </article>
+
+            <article class="provider-card">
+              <div class="provider-head">
+                <strong>Gemini</strong>
+                <span class="mini-pill {{ 'online' if sidebar.has_gemini_key else 'offline' }}">
+                  {{ 'ready' if sidebar.has_gemini_key else 'empty' }}
+                </span>
+              </div>
+              <p>{{ sidebar.gemini_model }}</p>
+              <label class="field">
+                <span>Gemini API Key</span>
+                <input id="gemini-api-key" type="password" placeholder="AIza..." autocomplete="off" />
+              </label>
+            </article>
+          </div>
+
+          <div class="inline-fields">
+            <label class="field">
+              <span>Grounded answers</span>
+              <select id="grounded-provider">
+                <option value="auto">Auto</option>
+                <option value="gemini">Gemini</option>
+                <option value="typhoon">Typhoon</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>General chat</span>
+              <select id="conversation-provider">
+                <option value="auto">Auto</option>
+                <option value="gemini">Gemini</option>
+                <option value="typhoon">Typhoon</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="inline-fields">
+            <label class="field">
+              <span>Top-K</span>
+              <input id="top-k" type="number" min="1" max="10" value="5" />
+            </label>
+            <label class="field">
+              <span>Temperature</span>
+              <input id="temperature" type="number" min="0" max="1" step="0.1" value="0.2" />
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Knowledge Base</h2>
+            <button id="reload-btn" class="ghost-button" type="button">Reload</button>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span>Files</span>
+              <strong id="doc-count">{{ sidebar.doc_count }}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Chunks</span>
+              <strong id="chunk-count">{{ sidebar.chunk_count }}</strong>
+            </div>
+            <div class="stat-card">
+              <span>Chars</span>
+              <strong id="char-count">{{ sidebar.char_count }}</strong>
+            </div>
+          </div>
+          <p class="data-path">{{ sidebar.data_dir }}</p>
+          <div id="file-list" class="file-list">
+            {% if sidebar.files %}
+              {% for file in sidebar.files %}
+                <article class="file-item">
+                  <div>
+                    <strong>{{ file.source }}</strong>
+                    <p>{{ file.chunks }} chunks · {{ file.chars }} chars</p>
+                  </div>
+                  <span>{{ file.ext }}</span>
+                </article>
+              {% endfor %}
+            {% else %}
+              <p class="empty-note">ยังไม่มีเอกสารในโฟลเดอร์ data</p>
+            {% endif %}
+          </div>
+        </section>
+      </aside>
+
+      <main class="chat-stage">
+        <section class="hero">
+          <p class="eyebrow">AI Web Chat</p>
+          <h2>เรื่องที่จะถาม</h2>
+          <p>
+            ถ้าคำถามเป็นเรื่องทั่วไป ระบบจะตอบแบบผู้ช่วย AI ปกติ แต่ถ้าคำถามอิงเอกสารที่โหลดไว้ ระบบจะดึงบริบทจากไฟล์มาตอบโดยตรง
+          </p>
+        </section>
+
+        <section id="chat-log" class="chat-log">
+          <article class="message assistant">
+            <div class="bubble">
+              <p>พร้อมใช้งานครับ จะถามคุยทั่วไปก่อน หรือถามจากไฟล์ในโฟลเดอร์ <code>data</code> ก็ได้</p>
+            </div>
+          </article>
+        </section>
+
+        <form id="chat-form" class="composer">
+          <label class="composer-field">
+            <span class="sr-only">Question</span>
+            <textarea
+              id="message-input"
+              rows="3"
+              maxlength="4000"
+              placeholder="พิมพ์คำถามทั่วไป หรือถามสิ่งที่อยู่ในเอกสารของคุณ..."
+              required
+            ></textarea>
+          </label>
+          <div class="composer-actions">
+            <button id="clear-btn" class="ghost-button" type="button">Clear chat</button>
+            <button id="send-btn" class="send-button" type="submit">Send</button>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <template id="message-template">
+      <article class="message">
+        <div class="bubble"></div>
+        <div class="meta"></div>
+        <div class="sources"></div>
+      </article>
+    </template>
+
+    <script>
+      window.__INITIAL_SIDEBAR__ = {{ sidebar | tojson }};
+    </script>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
