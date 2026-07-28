@@ -112,8 +112,8 @@ class Settings:
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     top_k: int = _env_int("TOP_K", 5)
     min_relevance: float = _env_float("MIN_RELEVANCE", 0.05)
-    default_grounded_provider: str = os.getenv("GROUNDED_PROVIDER", "auto").lower()
-    default_conversation_provider: str = os.getenv("CONVERSATION_PROVIDER", "auto").lower()
+    default_grounded_provider: str = os.getenv("GROUNDED_PROVIDER", "typhoon").lower()
+    default_conversation_provider: str = os.getenv("CONVERSATION_PROVIDER", "typhoon").lower()
 
 
 @dataclass
@@ -425,7 +425,7 @@ def provider_order(choice: str) -> list[str]:
         return ["gemini", "typhoon"]
     if choice == "typhoon":
         return ["typhoon", "gemini"]
-    return ["gemini", "typhoon"]
+    return ["typhoon", "gemini"]
 
 
 class TyphoonProvider:

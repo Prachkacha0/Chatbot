@@ -10,9 +10,9 @@ services:
     autoDeployTrigger: commit
     envVars:
       - key: GROUNDED_PROVIDER
-        value: auto
+        value: typhoon
       - key: CONVERSATION_PROVIDER
-        value: auto
+        value: typhoon
       - key: TYPHOON_MODEL
         value: typhoon-v2.1-12b-instruct
       - key: GEMINI_MODEL
