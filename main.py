@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +20,8 @@ from rag_service import (
     gemini_errors,
     resolve_api_key,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ChatRequest(BaseModel):
@@ -130,6 +134,16 @@ async def chat(payload: ChatRequest) -> dict:
         raise HTTPException(status_code=502, detail=f"Typhoon API error: {exc}") from exc
     except gemini_errors.APIError as exc:
         raise HTTPException(status_code=502, detail=f"Gemini API error: {exc}") from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Unexpected chat failure")
+        return {
+            "answer": "ขออภัยครับ ระบบมีปัญหาชั่วคราว ลองส่งคำถามใหม่ได้เลย",
+            "passages": [],
+            "elapsed": 0.0,
+            "mode": "server_error",
+            "provider_used": "local",
+            "error": str(exc),
+        }
 
     return result
 

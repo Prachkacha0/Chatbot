@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import glob
 import json
+import logging
 import os
 import threading
 import time
@@ -80,6 +81,8 @@ SOCIAL_PHRASES = (
     "เป็นยังไงบ้าง",
     "how are you",
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _env_int(name: str, default: int) -> int:
@@ -562,7 +565,11 @@ def answer_question(
                 )
                 provider_name = candidate_name
                 break
-            except (APIError, AuthenticationError, gemini_errors.APIError):
+            except (APIError, AuthenticationError, gemini_errors.APIError) as exc:
+                logger.warning("Grounded provider %s failed: %s", candidate_name, exc)
+                continue
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Unexpected grounded provider failure: %s", candidate_name)
                 continue
 
         if not answer:
@@ -622,7 +629,11 @@ def answer_question(
                     "mode": "conversation",
                     "provider_used": candidate_name,
                 }
-        except (APIError, AuthenticationError, gemini_errors.APIError):
+        except (APIError, AuthenticationError, gemini_errors.APIError) as exc:
+            logger.warning("Conversation provider %s failed: %s", candidate_name, exc)
+            continue
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Unexpected conversation provider failure: %s", candidate_name)
             continue
 
     return {
