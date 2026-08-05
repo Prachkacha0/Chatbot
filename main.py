@@ -73,7 +73,7 @@ def _sidebar_payload() -> dict:
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request) -> HTMLResponse:
+def home(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -85,18 +85,18 @@ async def home(request: Request) -> HTMLResponse:
 
 
 @app.get("/api/status")
-async def status() -> dict:
+def status() -> dict:
     return _sidebar_payload()
 
 
 @app.post("/api/reload")
-async def reload_documents() -> dict:
+def reload_documents() -> dict:
     kb.refresh(force=True)
     return _sidebar_payload()
 
 
 @app.post("/api/chat")
-async def chat(payload: ChatRequest) -> dict:
+def chat(payload: ChatRequest) -> dict:
     question = payload.message.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Message is required.")
@@ -149,7 +149,7 @@ async def chat(payload: ChatRequest) -> dict:
 
 
 @app.get("/health")
-async def health() -> dict:
+def health() -> dict:
     payload = _sidebar_payload()
     return {
         "status": "ok",

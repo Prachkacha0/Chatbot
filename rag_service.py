@@ -108,7 +108,7 @@ def _env_float(name: str, default: float) -> float:
 @dataclass(frozen=True)
 class Settings:
     typhoon_base_url: str = os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1")
-    typhoon_model: str = os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.1-12b-instruct"))
+    typhoon_model: str = os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct"))
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     top_k: int = _env_int("TOP_K", 5)
     min_relevance: float = _env_float("MIN_RELEVANCE", 0.05)
@@ -421,11 +421,10 @@ def normalize_provider_choice(choice: str | None, default: str) -> str:
 
 
 def provider_order(choice: str) -> list[str]:
-    if choice == "gemini":
-        return ["gemini", "typhoon"]
     if choice == "typhoon":
         return ["typhoon", "gemini"]
-    return ["typhoon", "gemini"]
+    # "gemini" and "auto" both prefer Gemini first, then fall back to Typhoon.
+    return ["gemini", "typhoon"]
 
 
 class TyphoonProvider:
@@ -434,8 +433,14 @@ class TyphoonProvider:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
+    def _client(self, api_key: str) -> OpenAI:
+        # Bound the call so a slow/hanging Typhoon request fails fast enough
+        # for the caller (or the auto-fallback logic) to react instead of
+        # hanging until the deployment platform's own gateway times out.
+        return OpenAI(api_key=api_key, base_url=self.settings.typhoon_base_url, timeout=45.0)
+
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
-        client = OpenAI(api_key=api_key, base_url=self.settings.typhoon_base_url)
+        client = self._client(api_key)
         messages = [{"role": "system", "content": GROUNDING_SYSTEM_PROMPT}]
         messages.extend(normalize_history(history))
         messages.append({"role": "user", "content": prompt})
@@ -449,7 +454,7 @@ class TyphoonProvider:
         return answer.strip()
 
     def conversation(self, *, api_key: str, prompt: str, system_instruction: str, temperature: float, history: list[dict[str, str]] | None) -> str:
-        client = OpenAI(api_key=api_key, base_url=self.settings.typhoon_base_url)
+        client = self._client(api_key)
         messages = [{"role": "system", "content": system_instruction}]
         messages.extend(normalize_history(history))
         messages.append({"role": "user", "content": prompt})
@@ -470,7 +475,10 @@ class GeminiProvider:
         self.settings = settings
 
     def _client(self, api_key: str) -> genai.Client:
-        return genai.Client(api_key=api_key)
+        # Bound the call so a slow/hanging Gemini request fails fast and the
+        # automatic fallback to Typhoon can kick in, instead of hanging until
+        # the deployment platform's own gateway timeout kills the connection.
+        return genai.Client(api_key=api_key, http_options={"timeout": 45_000})
 
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
         client = self._client(api_key)
@@ -565,11 +573,10 @@ def answer_question(
                 )
                 provider_name = candidate_name
                 break
-            except (APIError, AuthenticationError, gemini_errors.APIError) as exc:
-                logger.warning("Grounded provider %s failed: %s", candidate_name, exc)
-                continue
             except Exception as exc:  # noqa: BLE001
-                logger.exception("Unexpected grounded provider failure: %s", candidate_name)
+                # Any provider failure (auth, timeout, bad request, network) falls
+                # through to the next candidate in available_provider_candidates.
+                logger.warning("Grounded provider %s failed: %s", candidate_name, exc)
                 continue
 
         if not answer:
@@ -629,11 +636,8 @@ def answer_question(
                     "mode": "conversation",
                     "provider_used": candidate_name,
                 }
-        except (APIError, AuthenticationError, gemini_errors.APIError) as exc:
-            logger.warning("Conversation provider %s failed: %s", candidate_name, exc)
-            continue
         except Exception as exc:  # noqa: BLE001
-            logger.exception("Unexpected conversation provider failure: %s", candidate_name)
+            logger.warning("Conversation provider %s failed: %s", candidate_name, exc)
             continue
 
     return {

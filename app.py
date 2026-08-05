@@ -37,7 +37,7 @@ DATA_DIR = os.path.join(APP_DIR, "data")
 
 # Typhoon uses an OpenAI-compatible endpoint.
 BASE_URL = os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1")
-MODEL = os.getenv("MODEL", "typhoon-v2.1-12b-instruct")
+MODEL = os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct")
 TOP_K = int(os.getenv("TOP_K", "5"))
 MIN_RELEVANCE = float(os.getenv("MIN_RELEVANCE", "0.05"))
 

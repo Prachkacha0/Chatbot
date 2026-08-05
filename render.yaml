@@ -14,7 +14,7 @@ services:
       - key: CONVERSATION_PROVIDER
         value: typhoon
       - key: TYPHOON_MODEL
-        value: typhoon-v2.1-12b-instruct
+        value: typhoon-v2.5-30b-a3b-instruct
       - key: GEMINI_MODEL
         value: gemini-3.5-flash
       - key: TOP_K
