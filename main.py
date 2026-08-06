@@ -101,16 +101,6 @@ def chat(payload: ChatRequest) -> dict:
     if not question:
         raise HTTPException(status_code=400, detail="Message is required.")
 
-    index = kb.current_index()
-    if not index.files:
-        return {
-            "answer": "ตอนนี้ยังไม่มีเอกสารในระบบครับ กรุณาเพิ่มไฟล์ในโฟลเดอร์ data ก่อน",
-            "passages": [],
-            "elapsed": 0.0,
-            "mode": "no_documents",
-            "provider_used": "local",
-        }
-
     typhoon_api_key = resolve_api_key("typhoon", payload.typhoon_api_key)
     gemini_api_key = resolve_api_key("gemini", payload.gemini_api_key)
 
