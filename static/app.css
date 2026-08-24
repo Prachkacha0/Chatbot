@@ -158,7 +158,7 @@ h2,
   width: min(1380px, calc(100% - 32px));
   margin: 24px auto;
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 20px;
 }
 
@@ -180,11 +180,14 @@ h2,
   box-shadow: var(--shadow);
 }
 
-.brand-card,
-.panel,
 .hero,
 .composer {
   padding: 24px;
+}
+
+.brand-card,
+.panel {
+  padding: 20px;
 }
 
 .brand-card {
