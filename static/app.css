@@ -42,7 +42,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1a1a;
     --bg-soft: #162222;
     --surface: rgba(22, 34, 34, 0.92);
@@ -84,6 +84,49 @@
     --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.2), rgba(46, 196, 198, 0.15));
     --th-bg: rgba(46, 196, 198, 0.08);
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1a1a;
+  --bg-soft: #162222;
+  --surface: rgba(22, 34, 34, 0.92);
+  --surface-strong: #1a2e2e;
+  --ink: #e2eded;
+  --muted: #8fa3a1;
+  --line: rgba(200, 220, 218, 0.12);
+  --accent: #2ec4c6;
+  --accent-deep: #5de0e2;
+  --warm: #ffb703;
+  --danger: #f57d42;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  --card-bg: rgba(30, 50, 50, 0.7);
+  --card-bg-soft: rgba(30, 50, 50, 0.6);
+  --card-bg-subtle: rgba(30, 50, 50, 0.5);
+  --card-bg-bubble: rgba(30, 50, 50, 0.8);
+  --input-bg: rgba(20, 38, 38, 0.8);
+  --input-border: rgba(46, 196, 198, 0.2);
+  --input-focus-border: rgba(46, 196, 198, 0.5);
+  --input-focus-shadow: rgba(46, 196, 198, 0.15);
+  --ghost-bg: rgba(200, 220, 218, 0.1);
+  --user-bubble: linear-gradient(145deg, rgba(46, 196, 198, 0.15), rgba(30, 50, 50, 0.8));
+  --assistant-bubble: linear-gradient(145deg, rgba(255, 183, 3, 0.12), rgba(30, 50, 50, 0.8));
+  --brand-gradient: linear-gradient(160deg, rgba(46, 196, 198, 0.12), rgba(30, 50, 50, 0.7));
+  --body-gradient:
+    radial-gradient(circle at top left, rgba(255, 183, 3, 0.1), transparent 28%),
+    radial-gradient(circle at top right, rgba(46, 196, 198, 0.1), transparent 24%),
+    linear-gradient(180deg, #0f1a1a 0%, #0a1212 100%);
+  --source-bg: rgba(46, 196, 198, 0.06);
+  --source-border: rgba(46, 196, 198, 0.12);
+  --accent-pill-bg: rgba(46, 196, 198, 0.15);
+  --accent-pill-border: rgba(46, 196, 198, 0.22);
+  --danger-pill-bg: rgba(245, 125, 66, 0.12);
+  --danger-pill-border: rgba(245, 125, 66, 0.2);
+  --stat-bg: rgba(30, 50, 50, 0.6);
+  --file-badge-bg: rgba(46, 196, 198, 0.12);
+  --pre-bg: rgba(0, 0, 0, 0.3);
+  --code-bg: rgba(46, 196, 198, 0.1);
+  --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.2), rgba(46, 196, 198, 0.15));
+  --th-bg: rgba(46, 196, 198, 0.08);
 }
 
 * {
@@ -145,8 +188,49 @@ h2,
 }
 
 .brand-card {
+  position: relative;
   background: var(--brand-gradient), var(--surface-strong);
   margin-bottom: 20px;
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card-bg);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--input-focus-shadow), 0 0 0 1px var(--input-focus-border);
+}
+
+.theme-icon-dark {
+  display: none;
+}
+
+.theme-toggle.is-dark .theme-icon-light {
+  display: none;
+}
+
+.theme-toggle.is-dark .theme-icon-dark {
+  display: inline;
 }
 
 .brand-card h1,

@@ -1,4 +1,5 @@
 const STORAGE_KEY = "chatbot-research-settings";
+const THEME_STORAGE_KEY = "chatbot-research-theme";
 
 const state = {
   sidebar: window.__INITIAL_SIDEBAR__ || {},
@@ -18,6 +19,36 @@ const sendButton = document.querySelector("#send-btn");
 const clearButton = document.querySelector("#clear-btn");
 const reloadButton = document.querySelector("#reload-btn");
 const template = document.querySelector("#message-template");
+const themeToggleButton = document.querySelector("#theme-toggle");
+
+function systemPrefersDark() {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+function applyTheme(theme) {
+  const isDark = theme === "dark" || (theme === "system" && systemPrefersDark());
+  if (theme === "system") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", theme);
+  }
+  themeToggleButton.classList.toggle("is-dark", isDark);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE_KEY) || "system";
+  applyTheme(saved);
+}
+
+themeToggleButton.addEventListener("click", () => {
+  const current = localStorage.getItem(THEME_STORAGE_KEY) || "system";
+  const currentIsDark = current === "dark" || (current === "system" && systemPrefersDark());
+  const next = currentIsDark ? "light" : "dark";
+  localStorage.setItem(THEME_STORAGE_KEY, next);
+  applyTheme(next);
+});
+
+initTheme();
 
 function restoreSettings() {
   const serverGroundedDefault = state.sidebar.default_grounded_provider || "typhoon";
