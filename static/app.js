@@ -20,6 +20,8 @@ const clearButton = document.querySelector("#clear-btn");
 const reloadButton = document.querySelector("#reload-btn");
 const template = document.querySelector("#message-template");
 const themeToggleButton = document.querySelector("#theme-toggle");
+const sidebarToggleButton = document.querySelector("#sidebar-toggle");
+const sidebar = document.querySelector(".sidebar");
 
 function systemPrefersDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -49,6 +51,11 @@ themeToggleButton.addEventListener("click", () => {
 });
 
 initTheme();
+
+sidebarToggleButton.addEventListener("click", () => {
+  const isOpen = sidebar.classList.toggle("is-open");
+  sidebarToggleButton.setAttribute("aria-expanded", String(isOpen));
+});
 
 function restoreSettings() {
   const serverGroundedDefault = state.sidebar.default_grounded_provider || "typhoon";
@@ -88,7 +95,11 @@ function appendMessage(role, text, options = {}) {
   const sources = node.querySelector(".sources");
 
   node.classList.add(role);
-  if (role === "assistant" && typeof marked !== "undefined") {
+
+  if (options.isError) {
+    node.classList.add("error-message");
+    bubble.innerHTML = `<p>⚠️ ${escapeHtml(text)}</p>`;
+  } else if (role === "assistant" && typeof marked !== "undefined") {
     marked.setOptions({ breaks: true, gfm: true });
     const rawHtml = marked.parse(text);
     bubble.innerHTML = typeof DOMPurify !== "undefined"
@@ -116,6 +127,28 @@ function appendMessage(role, text, options = {}) {
   if (options.persist !== false && (role === "user" || role === "assistant")) {
     state.messages.push({ role, content: text });
   }
+
+  return node;
+}
+
+function showTypingIndicator() {
+  const node = template.content.firstElementChild.cloneNode(true);
+  const bubble = node.querySelector(".bubble");
+  const meta = node.querySelector(".meta");
+  const sources = node.querySelector(".sources");
+
+  node.classList.add("assistant", "typing-indicator");
+  bubble.innerHTML = `
+    <span class="typing-dots">
+      <span></span><span></span><span></span>
+    </span>
+  `;
+  meta.remove();
+  sources.remove();
+
+  chatLog.appendChild(node);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return node;
 }
 
 function renderSourceCard(passage) {
@@ -255,6 +288,7 @@ chatForm.addEventListener("submit", async (event) => {
   appendMessage("user", message);
   messageInput.value = "";
   setBusy(true);
+  const typingNode = showTypingIndicator();
 
   try {
     const result = await postJson("/api/chat", buildPayload(message, history));
@@ -263,15 +297,24 @@ chatForm.addEventListener("submit", async (event) => {
     const meta = provider
       ? `${mode} · ${provider} · ${result.elapsed.toFixed(2)}s`
       : `${mode} · ${result.elapsed.toFixed(2)}s`;
+    typingNode.remove();
     appendMessage("assistant", result.answer, {
       meta,
       passages: result.passages,
     });
   } catch (error) {
-    appendMessage("assistant", error.message, { meta: "request failed" });
+    typingNode.remove();
+    appendMessage("assistant", error.message, { meta: "request failed", isError: true });
   } finally {
     setBusy(false);
     messageInput.focus();
+  }
+});
+
+messageInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    chatForm.requestSubmit();
   }
 });
 
@@ -285,7 +328,7 @@ reloadButton.addEventListener("click", async () => {
       persist: false,
     });
   } catch (error) {
-    appendMessage("assistant", error.message, { meta: "reload failed" });
+    appendMessage("assistant", error.message, { meta: "reload failed", isError: true });
   } finally {
     setBusy(false);
   }

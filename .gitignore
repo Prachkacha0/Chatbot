@@ -12,3 +12,7 @@ venv/
 
 # Claude Code local session state
 .claude/scheduled_tasks.lock
+
+# Local dev server logs
+server_stdout.log
+server_stderr.log

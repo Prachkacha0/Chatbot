@@ -3,10 +3,13 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from rag_service import (
     APIError,
@@ -36,8 +39,19 @@ class ChatRequest(BaseModel):
 
 
 app = FastAPI(title="ChatBot-Research Web", version="2.0.0")
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 kb = KnowledgeBase()
+
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "ส่งคำถามถี่เกินไปครับ กรุณารอสักครู่แล้วลองใหม่"},
+    )
+
 
 static_dir = APP_DIR / "static"
 if static_dir.exists():
@@ -96,7 +110,8 @@ def reload_documents() -> dict:
 
 
 @app.post("/api/chat")
-def chat(payload: ChatRequest) -> dict:
+@limiter.limit("10/minute")
+def chat(request: Request, payload: ChatRequest) -> dict:
     question = payload.message.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Message is required.")
