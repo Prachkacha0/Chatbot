@@ -24,8 +24,6 @@ function restoreSettings() {
   const serverConversationDefault = state.sidebar.default_conversation_provider || "typhoon";
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    typhoonApiKeyInput.value = saved.typhoon_api_key || "";
-    geminiApiKeyInput.value = saved.gemini_api_key || "";
     topKInput.value = String(saved.top_k || 5);
     temperatureInput.value = String(saved.temperature ?? 0.2);
     groundedProviderInput.value =
@@ -44,8 +42,6 @@ function restoreSettings() {
 
 function persistSettings() {
   const payload = {
-    typhoon_api_key: typhoonApiKeyInput.value.trim(),
-    gemini_api_key: geminiApiKeyInput.value.trim(),
     top_k: Number(topKInput.value) || 5,
     temperature: Number(temperatureInput.value) || 0.2,
     grounded_provider: groundedProviderInput.value,
@@ -61,7 +57,15 @@ function appendMessage(role, text, options = {}) {
   const sources = node.querySelector(".sources");
 
   node.classList.add(role);
-  bubble.innerHTML = `<p>${escapeHtml(text)}</p>`;
+  if (role === "assistant" && typeof marked !== "undefined") {
+    marked.setOptions({ breaks: true, gfm: true });
+    const rawHtml = marked.parse(text);
+    bubble.innerHTML = typeof DOMPurify !== "undefined"
+      ? DOMPurify.sanitize(rawHtml)
+      : rawHtml;
+  } else {
+    bubble.innerHTML = `<p>${escapeHtml(text)}</p>`;
+  }
 
   if (options.meta) {
     meta.textContent = options.meta;

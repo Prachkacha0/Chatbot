@@ -6,7 +6,7 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -121,13 +121,13 @@ def _env_float(name: str, default: float) -> float:
 
 @dataclass(frozen=True)
 class Settings:
-    typhoon_base_url: str = os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1")
-    typhoon_model: str = os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct"))
-    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
-    top_k: int = _env_int("TOP_K", 5)
-    min_relevance: float = _env_float("MIN_RELEVANCE", 0.05)
-    default_grounded_provider: str = os.getenv("GROUNDED_PROVIDER", "gemini").lower()
-    default_conversation_provider: str = os.getenv("CONVERSATION_PROVIDER", "gemini").lower()
+    typhoon_base_url: str = field(default_factory=lambda: os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1"))
+    typhoon_model: str = field(default_factory=lambda: os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct")))
+    gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
+    top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
+    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.05))
+    default_grounded_provider: str = field(default_factory=lambda: os.getenv("GROUNDED_PROVIDER", "gemini").lower())
+    default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
 
 
 @dataclass
@@ -485,6 +485,15 @@ class TyphoonProvider:
         return answer.strip()
 
 
+def _gemini_contents(history: list[dict[str, str]] | None, prompt: str) -> list[dict[str, Any]]:
+    contents: list[dict[str, Any]] = []
+    for turn in normalize_history(history):
+        role = "model" if turn["role"] == "assistant" else "user"
+        contents.append({"role": role, "parts": [{"text": turn["content"]}]})
+    contents.append({"role": "user", "parts": [{"text": prompt}]})
+    return contents
+
+
 class GeminiProvider:
     name = "gemini"
 
@@ -492,37 +501,32 @@ class GeminiProvider:
         self.settings = settings
 
     def _client(self, api_key: str) -> genai.Client:
-        # Bound the call so a slow/hanging Gemini request fails fast and the
-        # automatic fallback to Typhoon can kick in, instead of hanging until
-        # the deployment platform's own gateway timeout kills the connection.
         return genai.Client(api_key=api_key, http_options={"timeout": 45_000})
 
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
         client = self._client(api_key)
-        interaction = client.interactions.create(
+        response = client.models.generate_content(
             model=self.settings.gemini_model,
-            system_instruction=GROUNDING_SYSTEM_PROMPT,
-            input=prompt,
-            generation_config={
+            contents=_gemini_contents(history, prompt),
+            config={
+                "system_instruction": GROUNDING_SYSTEM_PROMPT,
                 "temperature": temperature,
-                "thinking_level": "low",
             },
         )
-        answer = interaction.output_text or NO_ANSWER
+        answer = response.text or NO_ANSWER
         return answer.strip()
 
     def conversation(self, *, api_key: str, prompt: str, system_instruction: str, temperature: float, history: list[dict[str, str]] | None) -> str:
         client = self._client(api_key)
-        interaction = client.interactions.create(
+        response = client.models.generate_content(
             model=self.settings.gemini_model,
-            system_instruction=system_instruction,
-            input=prompt,
-            generation_config={
+            contents=_gemini_contents(history, prompt),
+            config={
+                "system_instruction": system_instruction,
                 "temperature": temperature,
-                "thinking_level": "minimal",
             },
         )
-        answer = interaction.output_text or ""
+        answer = response.text or ""
         return answer.strip()
 
 
