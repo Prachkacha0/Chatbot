@@ -672,6 +672,7 @@ textarea {
   font-size: 0.82rem;
   color: var(--muted);
   padding: 6px 0;
+  -webkit-user-select: none;
   user-select: none;
 }
 
