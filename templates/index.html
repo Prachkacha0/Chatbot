@@ -37,35 +37,44 @@
             </span>
           </div>
 
-          <div class="provider-grid">
-            <article class="provider-card">
-              <div class="provider-head">
-                <strong>Typhoon</strong>
-                <span class="mini-pill {{ 'online' if sidebar.has_typhoon_key else 'offline' }}">
-                  {{ 'ready' if sidebar.has_typhoon_key else 'empty' }}
-                </span>
-              </div>
-              <p>{{ sidebar.typhoon_model }}</p>
-              <label class="field">
-                <span>Typhoon API Key</span>
-                <input id="typhoon-api-key" type="password" placeholder="sk-..." />
-              </label>
-            </article>
+          <details class="provider-grid-details">
+            <summary class="provider-summary">
+              <span class="provider-summary-badges">
+                <span class="mini-pill {{ 'online' if sidebar.has_typhoon_key else 'offline' }}">Typhoon {{ 'ready' if sidebar.has_typhoon_key else 'empty' }}</span>
+                <span class="mini-pill {{ 'online' if sidebar.has_gemini_key else 'offline' }}">Gemini {{ 'ready' if sidebar.has_gemini_key else 'empty' }}</span>
+              </span>
+              <span class="provider-summary-toggle">API keys</span>
+            </summary>
+            <div class="provider-grid">
+              <article class="provider-card">
+                <div class="provider-head">
+                  <strong>Typhoon</strong>
+                  <span class="mini-pill {{ 'online' if sidebar.has_typhoon_key else 'offline' }}">
+                    {{ 'ready' if sidebar.has_typhoon_key else 'empty' }}
+                  </span>
+                </div>
+                <p>{{ sidebar.typhoon_model }}</p>
+                <label class="field">
+                  <span>Typhoon API Key</span>
+                  <input id="typhoon-api-key" type="password" placeholder="sk-..." />
+                </label>
+              </article>
 
-            <article class="provider-card">
-              <div class="provider-head">
-                <strong>Gemini</strong>
-                <span class="mini-pill {{ 'online' if sidebar.has_gemini_key else 'offline' }}">
-                  {{ 'ready' if sidebar.has_gemini_key else 'empty' }}
-                </span>
-              </div>
-              <p>{{ sidebar.gemini_model }}</p>
-              <label class="field">
-                <span>Gemini API Key</span>
-                <input id="gemini-api-key" type="password" placeholder="AIza..." />
-              </label>
-            </article>
-          </div>
+              <article class="provider-card">
+                <div class="provider-head">
+                  <strong>Gemini</strong>
+                  <span class="mini-pill {{ 'online' if sidebar.has_gemini_key else 'offline' }}">
+                    {{ 'ready' if sidebar.has_gemini_key else 'empty' }}
+                  </span>
+                </div>
+                <p>{{ sidebar.gemini_model }}</p>
+                <label class="field">
+                  <span>Gemini API Key</span>
+                  <input id="gemini-api-key" type="password" placeholder="AIza..." />
+                </label>
+              </article>
+            </div>
+          </details>
 
           <div class="inline-fields">
             <label class="field">
@@ -145,7 +154,7 @@
         <section class="hero">
           <p class="eyebrow">AI Web Chat</p>
           <h2>เรื่องที่จะถาม</h2>
-          <p>
+          <p title="ถ้าคำถามเป็นเรื่องทั่วไป ระบบจะตอบแบบผู้ช่วย AI ปกติ แต่ถ้าคำถามอิงเอกสารที่โหลดไว้ ระบบจะดึงบริบทจากไฟล์มาตอบโดยตรง">
             ถ้าคำถามเป็นเรื่องทั่วไป ระบบจะตอบแบบผู้ช่วย AI ปกติ แต่ถ้าคำถามอิงเอกสารที่โหลดไว้ ระบบจะดึงบริบทจากไฟล์มาตอบโดยตรง
           </p>
         </section>
@@ -163,7 +172,7 @@
             <span class="sr-only">Question</span>
             <textarea
               id="message-input"
-              rows="3"
+              rows="2"
               maxlength="4000"
               placeholder="พิมพ์คำถามทั่วไป หรือถามสิ่งที่อยู่ในเอกสารของคุณ..."
               required
@@ -196,3 +205,4 @@
     <script src="/static/app.js" defer></script>
   </body>
 </html>
+  

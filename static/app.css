@@ -136,7 +136,7 @@
 html,
 body {
   margin: 0;
-  min-height: 100%;
+  height: 100%;
 }
 
 body {
@@ -156,6 +156,7 @@ h2,
 
 .page-shell {
   width: min(1380px, calc(100% - 32px));
+  height: calc(100vh - 48px);
   margin: 24px auto;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -165,6 +166,11 @@ h2,
 .sidebar,
 .chat-stage {
   min-width: 0;
+  min-height: 0;
+}
+
+.sidebar {
+  overflow-y: auto;
 }
 
 .brand-card,
@@ -180,9 +186,12 @@ h2,
   box-shadow: var(--shadow);
 }
 
-.hero,
+.hero {
+  padding: 14px 24px;
+}
+
 .composer {
-  padding: 24px;
+  padding: 18px 24px;
 }
 
 .brand-card,
@@ -236,20 +245,28 @@ h2,
   display: inline;
 }
 
-.brand-card h1,
-.hero h2 {
-  margin: 10px 0 12px;
-  line-height: 1;
-}
-
 .brand-card h1 {
+  margin: 6px 0 8px;
+  line-height: 1.1;
   font-size: clamp(2rem, 4vw, 3rem);
   padding-right: 56px;
 }
 
 .hero h2 {
-  font-size: clamp(2rem, 4vw, 3.2rem);
-  max-width: 12ch;
+  margin: 2px 0 6px;
+  line-height: 1.4;
+  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+  max-width: 28ch;
+  font-family: "Noto Sans Thai", sans-serif;
+  font-weight: 600;
+}
+
+.hero p {
+  font-size: 0.88rem;
+  max-width: 60ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .eyebrow {
@@ -351,7 +368,7 @@ textarea:focus {
 
 textarea {
   resize: vertical;
-  min-height: 92px;
+  min-height: 64px;
 }
 
 .stats-grid {
@@ -361,11 +378,52 @@ textarea {
   gap: 10px;
 }
 
+.provider-grid-details {
+  margin-top: 16px;
+}
+
+.provider-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card-bg-soft);
+  cursor: pointer;
+  list-style: none;
+}
+
+.provider-summary::-webkit-details-marker {
+  display: none;
+}
+
+.provider-summary-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.provider-summary-toggle {
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.provider-summary-toggle::after {
+  content: " ▾";
+}
+
+.provider-grid-details[open] .provider-summary-toggle::after {
+  content: " ▴";
+}
+
 .provider-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .provider-card {
@@ -496,12 +554,12 @@ textarea {
 }
 
 .chat-log {
-  min-height: 420px;
+  min-height: 0;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow: auto;
+  overflow-y: auto;
 }
 
 .message {
@@ -801,6 +859,11 @@ textarea {
 @media (max-width: 1024px) {
   .page-shell {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .chat-stage {
+    height: calc(100vh - 48px);
   }
 
   .hero h2 {
@@ -842,6 +905,12 @@ textarea {
   .page-shell {
     width: min(100% - 20px, 100%);
     margin: 10px auto 24px;
+  }
+
+  .hero p {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
   }
 
   .brand-card,
