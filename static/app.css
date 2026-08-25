@@ -663,9 +663,38 @@ textarea {
 }
 
 .sources {
+  margin: 0 6px;
+}
+
+.sources-summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 6px 0;
+  user-select: none;
+}
+
+.sources-summary::-webkit-details-marker {
+  display: none;
+}
+
+.sources-summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform 150ms ease;
+}
+
+.sources[open] .sources-summary::before {
+  transform: rotate(90deg);
+}
+
+.sources-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 8px;
 }
 
 .source-card {

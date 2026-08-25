@@ -93,6 +93,8 @@ function appendMessage(role, text, options = {}) {
   const bubble = node.querySelector(".bubble");
   const meta = node.querySelector(".meta");
   const sources = node.querySelector(".sources");
+  const sourcesSummary = node.querySelector(".sources-summary");
+  const sourcesList = node.querySelector(".sources-list");
 
   node.classList.add(role);
 
@@ -116,7 +118,8 @@ function appendMessage(role, text, options = {}) {
   }
 
   if (Array.isArray(options.passages) && options.passages.length > 0) {
-    sources.replaceChildren(...options.passages.map(renderSourceCard));
+    sourcesSummary.textContent = `แหล่งอ้างอิง (${options.passages.length})`;
+    sourcesList.replaceChildren(...options.passages.map(renderSourceCard));
   } else {
     sources.remove();
   }

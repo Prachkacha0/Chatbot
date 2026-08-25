@@ -55,7 +55,13 @@ included in the prompt below. Follow these rules:
 6. Keep your tone natural, warm, and human, like a trusted assistant speaking
    to someone they support daily. Do not sound robotic.
 7. Answer in the same language as the user.
-8. Be concise, clear, and accurate.
+8. Default to a short, direct answer: a few sentences or a short list (roughly
+   3-5 bullet points) covering only what the question actually asked for.
+   Only give a long, fully detailed answer (many sections, sub-steps) when the
+   user explicitly asks for full detail, a complete guide, or asks you to
+   elaborate. When the question is broad and could span many topics, answer
+   the most important 2-3 points first and offer to go deeper instead of
+   dumping everything at once.
 """
 
 CONVERSATION_SYSTEM_TEMPLATE = """You are ChatBot-Research, acting as the user's personal secretary
@@ -82,6 +88,10 @@ Rules:
    verified it.
 5. Keep continuity with the recent conversation when helpful.
 6. Answer in the same language as the user.
+7. Default to a short, direct answer: a few sentences or a short list (roughly
+   3-5 bullet points) covering only what the question actually asked for.
+   Only give a long, fully detailed answer when the user explicitly asks for
+   full detail, a complete guide, or asks you to elaborate.
 """
 
 GREETING_WORDS = ("สวัสดี", "หวัดดี", "hello", "hi", "hey")
