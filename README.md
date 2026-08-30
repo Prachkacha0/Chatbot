@@ -1,71 +1,105 @@
 # ChatBot-Research
 
-This project now includes a browser-based web interface that does not depend on
-Streamlit, plus dual LLM provider support for both document-grounded answers and
-normal AI conversation.
+ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับการประกอบคอมพิวเตอร์ โดยใช้เอกสารวิจัยภาษาไทย 100+ ฉบับเป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
 
-## What it does
+## Features
 
-- Reads local files from `data/`
-- Builds a local retrieval index with TF-IDF
-- Answers document questions from retrieved passages only
-- Supports normal AI chat when the question is not answered by local files
-- Can use `Gemini`, `Typhoon`, or `auto` mode for grounded answers and general chat separately
+- **RAG**: ค้นหาข้อมูลจาก knowledge base ด้วย TF-IDF แล้วส่ง context ให้ LLM ตอบ พร้อมแหล่งอ้างอิง
+- **Dual provider**: ใช้ Typhoon สำหรับคำถามอิงเอกสาร, Gemini สำหรับการสนทนาทั่วไป (ตั้งค่าได้)
+- **Markdown rendering**: คำตอบ render markdown ได้ (bold, bullet, code block ฯลฯ)
+- **Dark / light mode**: สลับโหมดสว่าง-มืด จำค่าไว้ใน localStorage
+- **Typing indicator**: แสดง animation ระหว่างรอคำตอบ
+- **Enter to send**: กด Enter ส่งข้อความ, Shift+Enter ขึ้นบรรทัดใหม่
+- **Mobile sidebar**: ปุ่ม hamburger toggle sidebar บนหน้าจอเล็ก
+- **Rate limiting**: จำกัด 10 requests/นาที ต่อ IP ที่ `/api/chat`
+- **Error state**: แสดง error bubble สีแดงแยกจากคำตอบปกติ
+- **Source citations**: แสดงแหล่งอ้างอิงพับได้ใต้คำตอบ
+- **Collapsible panels**: Providers และ Knowledge Base พับ/คลี่ได้ใน sidebar
 
 ## Main files
 
 ```text
-D:\ChatBot-Research\
-|-- main.py                # FastAPI web app
-|-- rag_service.py         # RAG + provider routing (Gemini + Typhoon)
-|-- templates\index.html   # Chat UI
-|-- static\app.css         # Styles
-|-- static\app.js          # Frontend logic
-|-- app.py                 # Legacy Streamlit prototype
-|-- requirements.txt
-|-- .env
-`-- data\
+Chatbot/
+├── main.py              # FastAPI web app + rate limiting
+├── rag_service.py       # RAG pipeline + Gemini/Typhoon provider routing
+├── templates/index.html # Chat UI (Jinja2)
+├── static/app.css       # Styles + dark mode
+├── static/app.js        # Frontend logic
+├── requirements.txt
+├── .env                 # API keys (ไม่ commit)
+├── .env.example         # Template
+├── render.yaml          # Render deploy config
+└── data/                # ไฟล์ความรู้ (.txt, .md, .json, .pdf)
 ```
 
-## Run the web app
+## Run locally
 
 ```powershell
-cd D:\ChatBot-Research
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Then add one or both keys in `.env`:
+เปิดไฟล์ `.env` แล้วใส่ API key:
 
 ```text
-TYPHOON_API_KEY=sk-...your real key...
+TYPHOON_API_KEY=sk-...
 GEMINI_API_KEY=AIza...
 ```
 
-Start the web server on port `5001`:
+เปิด server:
 
 ```powershell
 uvicorn main:app --reload --port 5001
 ```
 
-Open:
+เปิดเบราว์เซอร์:
 
 ```text
 http://localhost:5001
 ```
 
-## Deploy
+## Environment variables
 
-This app is a dynamic FastAPI service, so it cannot run on GitHub Pages.
-Use a Python app host such as Render or Railway instead.
+| Variable | Default | คำอธิบาย |
+|---|---|---|
+| `TYPHOON_API_KEY` | — | API key จาก opentyphoon.ai |
+| `GEMINI_API_KEY` | — | API key จาก Google AI Studio |
+| `GROUNDED_PROVIDER` | `gemini` | provider สำหรับคำถามอิงเอกสาร (`gemini` / `typhoon` / `auto`) |
+| `CONVERSATION_PROVIDER` | `gemini` | provider สำหรับสนทนาทั่วไป (`gemini` / `typhoon` / `auto`) |
+| `TYPHOON_MODEL` | `typhoon-v2.5-30b-a3b-instruct` | model id ของ Typhoon |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | model id ของ Gemini |
+| `TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | endpoint (OpenAI-compatible) |
+| `TOP_K` | `5` | จำนวน chunks สูงสุดที่ดึงมา |
+| `MIN_RELEVANCE` | `0.05` | คะแนน TF-IDF ขั้นต่ำ |
 
-### Render
+## Provider behavior
 
-1. Push this repository to GitHub.
-2. In Render, create a new `Web Service` from the repo.
-3. Render can read [`render.yaml`](./render.yaml) automatically, or you can set:
+- **Grounded answers**: เมื่อพบ chunks ที่เกี่ยวข้องใน knowledge base, ใช้ provider ที่กำหนดใน `GROUNDED_PROVIDER`
+- **General chat**: เมื่อไม่พบ chunks หรือคำถามเป็นเรื่องทั่วไป, ใช้ `CONVERSATION_PROVIDER`
+- `auto` มีความหมายเดียวกับ `gemini` (Gemini ก่อน, fallback ไป Typhoon ถ้าใช้ไม่ได้)
+- ถ้าไม่มี API key ทั้งสองตัว, ระบบตอบด้วย lightweight local response แทน
+
+## API endpoints
+
+| Method | Path | คำอธิบาย |
+|---|---|---|
+| `GET` | `/` | Chat UI |
+| `POST` | `/api/chat` | ส่งคำถาม (rate-limited: 10/min) |
+| `POST` | `/api/reload` | โหลด knowledge base ใหม่ |
+| `GET` | `/api/status` | สถานะ knowledge base |
+| `GET` | `/health` | health check |
+
+## Supported file types
+
+`.txt` · `.md` · `.json` · `.pdf`
+
+## Deploy to Render
+
+1. Push repo ไป GitHub
+2. ใน Render สร้าง **Web Service** จาก repo
+3. Render อ่าน [`render.yaml`](./render.yaml) อัตโนมัติ หรือตั้งเอง:
 
 ```text
 Build Command: pip install -r requirements.txt
@@ -73,53 +107,19 @@ Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
 Health Check Path: /health
 ```
 
-4. Add environment variables from `.env.example`, especially:
+4. เพิ่ม environment variables ใน Render dashboard อย่างน้อย:
 
 ```text
 TYPHOON_API_KEY=...
 GEMINI_API_KEY=...
-GROUNDED_PROVIDER=auto
-CONVERSATION_PROVIDER=auto
-TYPHOON_MODEL=typhoon-v2.5-30b-a3b-instruct
-GEMINI_MODEL=gemini-3.5-flash
-TOP_K=5
-MIN_RELEVANCE=0.05
 ```
 
-5. Deploy, then open the generated Render URL.
+5. Deploy แล้วเปิด URL ที่ Render ให้
 
-### Important note about `data/`
-
-The knowledge base is loaded from the local `data/` folder inside the deployed app.
-If you change documents later, you need to either:
-
-- commit the updated files to GitHub and redeploy, or
-- add persistent storage / an upload flow
-
-## Supported files
-
-- `.txt`
-- `.md`
-- `.json`
-- `.pdf`
-
-## API endpoints
-
-- `GET /` web chat UI
-- `POST /api/chat` ask a question
-- `POST /api/reload` rebuild the document index
-- `GET /api/status` current knowledge-base stats
-- `GET /health` basic health check
-
-## Provider behavior
-
-- `grounded_provider` controls who answers when relevant document passages are found.
-- `conversation_provider` controls who answers normal AI chat and fallback responses.
-- `auto` prefers Gemini first, then Typhoon if Gemini is unavailable.
-- If no provider key is available, the app falls back to a local lightweight assistant response.
+> **หมายเหตุ**: knowledge base โหลดจาก `data/` ในตัว app ถ้าเพิ่มเอกสารใหม่ต้อง commit แล้ว redeploy
 
 ## Notes
 
-- Source citations use the path relative to `data/`, so duplicate filenames do not collide.
-- Retrieval uses both word n-grams and character n-grams for better matching.
-- `app.py` is kept only as a legacy Streamlit prototype; the main web app is `main.py`.
+- Source citation ใช้ path สัมพัทธ์จาก `data/` ทำให้ชื่อไฟล์ซ้ำกันไม่ชน
+- TF-IDF ใช้ทั้ง word n-grams และ character n-grams เพื่อ matching ที่ดีขึ้น
+- `app.py` เก็บไว้เป็น legacy Streamlit prototype เท่านั้น ไม่ใช้งานแล้ว

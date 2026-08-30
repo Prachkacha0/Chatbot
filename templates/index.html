@@ -108,40 +108,50 @@
         </section>
 
         <section class="panel">
-          <div class="panel-head">
-            <h2>Knowledge Base</h2>
-            <button id="reload-btn" class="ghost-button" type="button">Reload</button>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <span>Files</span>
-              <strong id="doc-count">{{ sidebar.doc_count }}</strong>
+          <details class="kb-details">
+            <summary class="kb-summary">
+              <h2>Knowledge Base</h2>
+              <span class="kb-summary-stats">
+                <span class="mini-pill online">{{ sidebar.doc_count }} files</span>
+                <span class="mini-pill online">{{ sidebar.chunk_count }} chunks</span>
+              </span>
+            </summary>
+            <div class="kb-content">
+              <div class="panel-head">
+                <button id="reload-btn" class="ghost-button" type="button">Reload</button>
+              </div>
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <span>Files</span>
+                  <strong id="doc-count">{{ sidebar.doc_count }}</strong>
+                </div>
+                <div class="stat-card">
+                  <span>Chunks</span>
+                  <strong id="chunk-count">{{ sidebar.chunk_count }}</strong>
+                </div>
+                <div class="stat-card">
+                  <span>Chars</span>
+                  <strong id="char-count">{{ sidebar.char_count }}</strong>
+                </div>
+              </div>
+              <p class="data-path">{{ sidebar.data_dir }}</p>
+              <div id="file-list" class="file-list">
+                {% if sidebar.files %}
+                  {% for file in sidebar.files %}
+                    <article class="file-item">
+                      <div>
+                        <strong>{{ file.source }}</strong>
+                        <p>{{ file.chunks }} chunks · {{ file.chars }} chars</p>
+                      </div>
+                      <span>{{ file.ext }}</span>
+                    </article>
+                  {% endfor %}
+                {% else %}
+                  <p class="empty-note">ยังไม่มีเอกสารในโฟลเดอร์ data</p>
+                {% endif %}
+              </div>
             </div>
-            <div class="stat-card">
-              <span>Chunks</span>
-              <strong id="chunk-count">{{ sidebar.chunk_count }}</strong>
-            </div>
-            <div class="stat-card">
-              <span>Chars</span>
-              <strong id="char-count">{{ sidebar.char_count }}</strong>
-            </div>
-          </div>
-          <p class="data-path">{{ sidebar.data_dir }}</p>
-          <div id="file-list" class="file-list">
-            {% if sidebar.files %}
-              {% for file in sidebar.files %}
-                <article class="file-item">
-                  <div>
-                    <strong>{{ file.source }}</strong>
-                    <p>{{ file.chunks }} chunks · {{ file.chars }} chars</p>
-                  </div>
-                  <span>{{ file.ext }}</span>
-                </article>
-              {% endfor %}
-            {% else %}
-              <p class="empty-note">ยังไม่มีเอกสารในโฟลเดอร์ data</p>
-            {% endif %}
-          </div>
+          </details>
         </section>
       </aside>
 

@@ -4,8 +4,8 @@
     {
       "name": "chatbot",
       "runtimeExecutable": ".venv/Scripts/uvicorn.exe",
-      "runtimeArgs": ["main:app", "--port", "5001"],
-      "port": 5001
+      "runtimeArgs": ["main:app", "--port", "5002"],
+      "port": 5002
     }
   ]
 }

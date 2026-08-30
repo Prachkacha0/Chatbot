@@ -6,127 +6,127 @@
   --ink: #172121;
   --muted: #51605f;
   --line: rgba(23, 33, 33, 0.12);
-  --accent: #0f8b8d;
-  --accent-deep: #0d5c63;
+  --accent: #3a86ff;
+  --accent-deep: #2667cc;
   --warm: #ffb703;
   --danger: #c44900;
-  --shadow: 0 24px 60px rgba(15, 92, 99, 0.12);
+  --shadow: 0 24px 60px rgba(58, 134, 255, 0.12);
   --card-bg: rgba(255, 255, 255, 0.78);
   --card-bg-soft: rgba(255, 255, 255, 0.7);
   --card-bg-subtle: rgba(255, 255, 255, 0.66);
   --card-bg-bubble: rgba(255, 255, 255, 0.84);
   --input-bg: rgba(255, 255, 255, 0.78);
-  --input-border: rgba(15, 92, 99, 0.16);
-  --input-focus-border: rgba(15, 139, 141, 0.5);
-  --input-focus-shadow: rgba(15, 139, 141, 0.12);
+  --input-border: rgba(38, 103, 204, 0.16);
+  --input-focus-border: rgba(58, 134, 255, 0.5);
+  --input-focus-shadow: rgba(58, 134, 255, 0.12);
   --ghost-bg: rgba(23, 33, 33, 0.08);
-  --user-bubble: linear-gradient(145deg, rgba(15, 139, 141, 0.18), rgba(255, 255, 255, 0.9));
+  --user-bubble: linear-gradient(145deg, rgba(58, 134, 255, 0.18), rgba(255, 255, 255, 0.9));
   --assistant-bubble: linear-gradient(145deg, rgba(255, 183, 3, 0.16), rgba(255, 255, 255, 0.9));
-  --brand-gradient: linear-gradient(160deg, rgba(15, 139, 141, 0.14), rgba(255, 255, 255, 0.78));
+  --brand-gradient: linear-gradient(160deg, rgba(58, 134, 255, 0.14), rgba(255, 255, 255, 0.78));
   --body-gradient:
     radial-gradient(circle at top left, rgba(255, 183, 3, 0.18), transparent 28%),
-    radial-gradient(circle at top right, rgba(15, 139, 141, 0.16), transparent 24%),
+    radial-gradient(circle at top right, rgba(58, 134, 255, 0.16), transparent 24%),
     linear-gradient(180deg, #fbf7ef 0%, var(--bg) 100%);
-  --source-bg: rgba(15, 92, 99, 0.06);
-  --source-border: rgba(15, 92, 99, 0.12);
-  --accent-pill-bg: rgba(15, 139, 141, 0.12);
-  --accent-pill-border: rgba(15, 139, 141, 0.18);
+  --source-bg: rgba(38, 103, 204, 0.06);
+  --source-border: rgba(38, 103, 204, 0.12);
+  --accent-pill-bg: rgba(58, 134, 255, 0.12);
+  --accent-pill-border: rgba(58, 134, 255, 0.18);
   --danger-pill-bg: rgba(196, 73, 0, 0.1);
   --danger-pill-border: rgba(196, 73, 0, 0.16);
   --stat-bg: rgba(255, 255, 255, 0.72);
-  --file-badge-bg: rgba(15, 139, 141, 0.1);
-  --pre-bg: rgba(15, 92, 99, 0.06);
-  --code-bg: rgba(15, 92, 99, 0.08);
-  --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.45), rgba(15, 139, 141, 0.24));
-  --th-bg: rgba(15, 92, 99, 0.06);
+  --file-badge-bg: rgba(58, 134, 255, 0.1);
+  --pre-bg: rgba(38, 103, 204, 0.06);
+  --code-bg: rgba(38, 103, 204, 0.08);
+  --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.45), rgba(58, 134, 255, 0.24));
+  --th-bg: rgba(38, 103, 204, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1a1a;
-    --bg-soft: #162222;
-    --surface: rgba(22, 34, 34, 0.92);
-    --surface-strong: #1a2e2e;
-    --ink: #e2eded;
-    --muted: #8fa3a1;
-    --line: rgba(200, 220, 218, 0.12);
-    --accent: #2ec4c6;
-    --accent-deep: #5de0e2;
+    --bg: #0d1526;
+    --bg-soft: #111d38;
+    --surface: rgba(15, 22, 40, 0.92);
+    --surface-strong: #152040;
+    --ink: #e2eaf8;
+    --muted: #8fa3c8;
+    --line: rgba(200, 210, 230, 0.12);
+    --accent: #60a5fa;
+    --accent-deep: #93c5fd;
     --warm: #ffb703;
     --danger: #f57d42;
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-    --card-bg: rgba(30, 50, 50, 0.7);
-    --card-bg-soft: rgba(30, 50, 50, 0.6);
-    --card-bg-subtle: rgba(30, 50, 50, 0.5);
-    --card-bg-bubble: rgba(30, 50, 50, 0.8);
-    --input-bg: rgba(20, 38, 38, 0.8);
-    --input-border: rgba(46, 196, 198, 0.2);
-    --input-focus-border: rgba(46, 196, 198, 0.5);
-    --input-focus-shadow: rgba(46, 196, 198, 0.15);
-    --ghost-bg: rgba(200, 220, 218, 0.1);
-    --user-bubble: linear-gradient(145deg, rgba(46, 196, 198, 0.15), rgba(30, 50, 50, 0.8));
-    --assistant-bubble: linear-gradient(145deg, rgba(255, 183, 3, 0.12), rgba(30, 50, 50, 0.8));
-    --brand-gradient: linear-gradient(160deg, rgba(46, 196, 198, 0.12), rgba(30, 50, 50, 0.7));
+    --card-bg: rgba(20, 30, 50, 0.7);
+    --card-bg-soft: rgba(20, 30, 50, 0.6);
+    --card-bg-subtle: rgba(20, 30, 50, 0.5);
+    --card-bg-bubble: rgba(20, 30, 50, 0.8);
+    --input-bg: rgba(15, 22, 40, 0.8);
+    --input-border: rgba(96, 165, 250, 0.2);
+    --input-focus-border: rgba(96, 165, 250, 0.5);
+    --input-focus-shadow: rgba(96, 165, 250, 0.15);
+    --ghost-bg: rgba(200, 210, 230, 0.1);
+    --user-bubble: linear-gradient(145deg, rgba(96, 165, 250, 0.15), rgba(20, 30, 50, 0.8));
+    --assistant-bubble: linear-gradient(145deg, rgba(255, 183, 3, 0.12), rgba(20, 30, 50, 0.8));
+    --brand-gradient: linear-gradient(160deg, rgba(96, 165, 250, 0.12), rgba(20, 30, 50, 0.7));
     --body-gradient:
       radial-gradient(circle at top left, rgba(255, 183, 3, 0.1), transparent 28%),
-      radial-gradient(circle at top right, rgba(46, 196, 198, 0.1), transparent 24%),
-      linear-gradient(180deg, #0f1a1a 0%, #0a1212 100%);
-    --source-bg: rgba(46, 196, 198, 0.06);
-    --source-border: rgba(46, 196, 198, 0.12);
-    --accent-pill-bg: rgba(46, 196, 198, 0.15);
-    --accent-pill-border: rgba(46, 196, 198, 0.22);
+      radial-gradient(circle at top right, rgba(96, 165, 250, 0.12), transparent 24%),
+      linear-gradient(180deg, #0d1526 0%, #080e1a 100%);
+    --source-bg: rgba(96, 165, 250, 0.06);
+    --source-border: rgba(96, 165, 250, 0.12);
+    --accent-pill-bg: rgba(96, 165, 250, 0.15);
+    --accent-pill-border: rgba(96, 165, 250, 0.22);
     --danger-pill-bg: rgba(245, 125, 66, 0.12);
     --danger-pill-border: rgba(245, 125, 66, 0.2);
-    --stat-bg: rgba(30, 50, 50, 0.6);
-    --file-badge-bg: rgba(46, 196, 198, 0.12);
+    --stat-bg: rgba(20, 30, 50, 0.6);
+    --file-badge-bg: rgba(96, 165, 250, 0.12);
     --pre-bg: rgba(0, 0, 0, 0.3);
-    --code-bg: rgba(46, 196, 198, 0.1);
-    --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.2), rgba(46, 196, 198, 0.15));
-    --th-bg: rgba(46, 196, 198, 0.08);
+    --code-bg: rgba(96, 165, 250, 0.1);
+    --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.2), rgba(96, 165, 250, 0.18));
+    --th-bg: rgba(96, 165, 250, 0.08);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0f1a1a;
-  --bg-soft: #162222;
-  --surface: rgba(22, 34, 34, 0.92);
-  --surface-strong: #1a2e2e;
-  --ink: #e2eded;
-  --muted: #8fa3a1;
-  --line: rgba(200, 220, 218, 0.12);
-  --accent: #2ec4c6;
-  --accent-deep: #5de0e2;
+  --bg: #0d1526;
+  --bg-soft: #111d38;
+  --surface: rgba(15, 22, 40, 0.92);
+  --surface-strong: #152040;
+  --ink: #e2eaf8;
+  --muted: #8fa3c8;
+  --line: rgba(200, 210, 230, 0.12);
+  --accent: #60a5fa;
+  --accent-deep: #93c5fd;
   --warm: #ffb703;
   --danger: #f57d42;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-  --card-bg: rgba(30, 50, 50, 0.7);
-  --card-bg-soft: rgba(30, 50, 50, 0.6);
-  --card-bg-subtle: rgba(30, 50, 50, 0.5);
-  --card-bg-bubble: rgba(30, 50, 50, 0.8);
-  --input-bg: rgba(20, 38, 38, 0.8);
-  --input-border: rgba(46, 196, 198, 0.2);
-  --input-focus-border: rgba(46, 196, 198, 0.5);
-  --input-focus-shadow: rgba(46, 196, 198, 0.15);
-  --ghost-bg: rgba(200, 220, 218, 0.1);
-  --user-bubble: linear-gradient(145deg, rgba(46, 196, 198, 0.15), rgba(30, 50, 50, 0.8));
-  --assistant-bubble: linear-gradient(145deg, rgba(255, 183, 3, 0.12), rgba(30, 50, 50, 0.8));
-  --brand-gradient: linear-gradient(160deg, rgba(46, 196, 198, 0.12), rgba(30, 50, 50, 0.7));
+  --card-bg: rgba(20, 30, 50, 0.7);
+  --card-bg-soft: rgba(20, 30, 50, 0.6);
+  --card-bg-subtle: rgba(20, 30, 50, 0.5);
+  --card-bg-bubble: rgba(20, 30, 50, 0.8);
+  --input-bg: rgba(15, 22, 40, 0.8);
+  --input-border: rgba(96, 165, 250, 0.2);
+  --input-focus-border: rgba(96, 165, 250, 0.5);
+  --input-focus-shadow: rgba(96, 165, 250, 0.15);
+  --ghost-bg: rgba(200, 210, 230, 0.1);
+  --user-bubble: linear-gradient(145deg, rgba(96, 165, 250, 0.15), rgba(20, 30, 50, 0.8));
+  --assistant-bubble: linear-gradient(145deg, rgba(255, 183, 3, 0.12), rgba(20, 30, 50, 0.8));
+  --brand-gradient: linear-gradient(160deg, rgba(96, 165, 250, 0.12), rgba(20, 30, 50, 0.7));
   --body-gradient:
     radial-gradient(circle at top left, rgba(255, 183, 3, 0.1), transparent 28%),
-    radial-gradient(circle at top right, rgba(46, 196, 198, 0.1), transparent 24%),
-    linear-gradient(180deg, #0f1a1a 0%, #0a1212 100%);
-  --source-bg: rgba(46, 196, 198, 0.06);
-  --source-border: rgba(46, 196, 198, 0.12);
-  --accent-pill-bg: rgba(46, 196, 198, 0.15);
-  --accent-pill-border: rgba(46, 196, 198, 0.22);
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.12), transparent 24%),
+    linear-gradient(180deg, #0d1526 0%, #080e1a 100%);
+  --source-bg: rgba(96, 165, 250, 0.06);
+  --source-border: rgba(96, 165, 250, 0.12);
+  --accent-pill-bg: rgba(96, 165, 250, 0.15);
+  --accent-pill-border: rgba(96, 165, 250, 0.22);
   --danger-pill-bg: rgba(245, 125, 66, 0.12);
   --danger-pill-border: rgba(245, 125, 66, 0.2);
-  --stat-bg: rgba(30, 50, 50, 0.6);
-  --file-badge-bg: rgba(46, 196, 198, 0.12);
+  --stat-bg: rgba(20, 30, 50, 0.6);
+  --file-badge-bg: rgba(96, 165, 250, 0.12);
   --pre-bg: rgba(0, 0, 0, 0.3);
-  --code-bg: rgba(46, 196, 198, 0.1);
-  --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.2), rgba(46, 196, 198, 0.15));
-  --th-bg: rgba(46, 196, 198, 0.08);
+  --code-bg: rgba(96, 165, 250, 0.1);
+  --hero-deco: linear-gradient(135deg, rgba(255, 183, 3, 0.2), rgba(96, 165, 250, 0.18));
+  --th-bg: rgba(96, 165, 250, 0.08);
 }
 
 * {
@@ -529,6 +529,46 @@ textarea {
   background: var(--file-badge-bg);
   color: var(--accent-deep);
   font-size: 0.75rem;
+}
+
+.kb-details {
+  margin: 0;
+}
+
+.kb-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card-bg-soft);
+  cursor: pointer;
+  list-style: none;
+}
+
+.kb-summary::-webkit-details-marker {
+  display: none;
+}
+
+.kb-summary h2 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.kb-summary-stats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.kb-content {
+  margin-top: 12px;
+}
+
+.kb-content .panel-head {
+  margin-bottom: 12px;
 }
 
 .chat-stage {
