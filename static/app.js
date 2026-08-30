@@ -1,7 +1,6 @@
 const THEME_STORAGE_KEY = "chatbot-research-theme";
 
 const state = {
-  sidebar: window.__INITIAL_SIDEBAR__ || {},
   messages: [],
 };
 
@@ -12,8 +11,6 @@ const sendButton = document.querySelector("#send-btn");
 const clearButton = document.querySelector("#clear-btn");
 const template = document.querySelector("#message-template");
 const themeToggleButton = document.querySelector("#theme-toggle");
-const sidebarToggleButton = document.querySelector("#sidebar-toggle");
-const sidebar = document.querySelector(".sidebar");
 
 function systemPrefersDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -44,10 +41,6 @@ themeToggleButton.addEventListener("click", () => {
 
 initTheme();
 
-sidebarToggleButton.addEventListener("click", () => {
-  const isOpen = sidebar.classList.toggle("is-open");
-  sidebarToggleButton.setAttribute("aria-expanded", String(isOpen));
-});
 
 function appendMessage(role, text, options = {}) {
   const node = template.content.firstElementChild.cloneNode(true);

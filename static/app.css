@@ -532,46 +532,6 @@ textarea {
   font-size: 0.75rem;
 }
 
-.kb-details {
-  margin: 0;
-}
-
-.kb-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card-bg-soft);
-  cursor: pointer;
-  list-style: none;
-}
-
-.kb-summary::-webkit-details-marker {
-  display: none;
-}
-
-.kb-summary h2 {
-  font-size: 0.95rem;
-  margin: 0;
-}
-
-.kb-summary-stats {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.kb-content {
-  margin-top: 12px;
-}
-
-.kb-content .panel-head {
-  margin-bottom: 12px;
-}
-
 .chat-stage {
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -893,10 +853,6 @@ textarea {
   }
 }
 
-.sidebar-toggle {
-  display: none;
-}
-
 @media (max-width: 1024px) {
   .page-shell {
     grid-template-columns: 1fr;
@@ -911,33 +867,7 @@ textarea {
     max-width: none;
   }
 
-  .sidebar-toggle {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    margin-bottom: 16px;
-    padding: 14px 18px;
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    background: var(--card-bg);
-    color: var(--ink);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .sidebar-toggle-icon {
-    font-size: 1.1rem;
-    line-height: 1;
-  }
-
   .sidebar {
-    display: none;
-  }
-
-  .sidebar.is-open {
-    display: block;
     margin-bottom: 20px;
   }
 }

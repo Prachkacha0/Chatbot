@@ -1,6 +1,6 @@
 # ChatBot-Research
 
-ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับการประกอบคอมพิวเตอร์ โดยใช้เอกสารวิจัยภาษาไทย 100+ ฉบับเป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
+ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับการประกอบคอมพิวเตอร์ โดยใช้ชุดข้อมูลภาษาไทย (15 บท 60 หัวข้อย่อย 2,880 คู่คำถาม-คำตอบ) เป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
 
 ## Features
 
@@ -14,7 +14,6 @@
 - **Rate limiting**: จำกัด 10 requests/นาที ต่อ IP ที่ `/api/chat`
 - **Error state**: แสดง error bubble สีแดงแยกจากคำตอบปกติ
 - **Source citations**: แสดงแหล่งอ้างอิงพับได้ใต้คำตอบ
-- **Collapsible panels**: Providers และ Knowledge Base พับ/คลี่ได้ใน sidebar
 
 ## Main files
 
@@ -66,7 +65,7 @@ http://localhost:5001
 |---|---|---|
 | `TYPHOON_API_KEY` | — | API key จาก opentyphoon.ai |
 | `GEMINI_API_KEY` | — | API key จาก Google AI Studio |
-| `GROUNDED_PROVIDER` | `gemini` | provider สำหรับคำถามอิงเอกสาร (`gemini` / `typhoon` / `auto`) |
+| `GROUNDED_PROVIDER` | `typhoon` | provider สำหรับคำถามอิงเอกสาร (`gemini` / `typhoon` / `auto`) |
 | `CONVERSATION_PROVIDER` | `gemini` | provider สำหรับสนทนาทั่วไป (`gemini` / `typhoon` / `auto`) |
 | `TYPHOON_MODEL` | `typhoon-v2.5-30b-a3b-instruct` | model id ของ Typhoon |
 | `GEMINI_MODEL` | `gemini-3.5-flash` | model id ของ Gemini |

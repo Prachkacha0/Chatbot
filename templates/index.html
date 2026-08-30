@@ -23,22 +23,17 @@
         <div class="brand-card">
           <h1>ChatBot-Research</h1>
           <p class="lede">
-            ถามคุยทั่วไปได้แบบ AI assistant และเมื่อมีข้อมูลในไฟล์ ระบบจะดึงจากเอกสารมาตอบอย่างชัดเจนพร้อมอ้างอิง
+            RAG Chatbot สำหรับงานวิจัยการประกอบคอมพิวเตอร์ — ค้นหาจากชุดข้อมูลภาษาไทย 15 บท พร้อมอ้างอิงแหล่งที่มา
           </p>
         </div>
 
       </aside>
 
       <main class="chat-stage">
-        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="เปิด/ปิดแถบข้อมูล" aria-expanded="false">
-          <span class="sidebar-toggle-icon">☰</span>
-          <span>ข้อมูลระบบ</span>
-        </button>
-
         <section class="hero">
           <h2>ถามเรื่องการประกอบคอมพิวเตอร์</h2>
           <p>
-            ระบบค้นหาข้อมูลจากเอกสารวิจัยภาษาไทย 100+ ฉบับ แล้วตอบพร้อมอ้างอิงแหล่งที่มา
+            ระบบค้นหาจากชุดข้อมูลภาษาไทย ครอบคลุม 15 บท 2,880 คำถาม-คำตอบ แล้วตอบพร้อมอ้างอิงแหล่งที่มา
           </p>
         </section>
 
@@ -82,9 +77,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
-    <script>
-      window.__INITIAL_SIDEBAR__ = {{ sidebar | tojson }};
-    </script>
     <script src="/static/app.js" defer></script>
   </body>
 </html>

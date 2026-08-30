@@ -91,10 +91,7 @@ def home(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "index.html",
-        {
-            "request": request,
-            "sidebar": _sidebar_payload(),
-        },
+        {"request": request},
     )
 
 
