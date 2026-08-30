@@ -1,4 +1,3 @@
-const STORAGE_KEY = "chatbot-research-settings";
 const THEME_STORAGE_KEY = "chatbot-research-theme";
 
 const state = {
@@ -9,15 +8,8 @@ const state = {
 const chatLog = document.querySelector("#chat-log");
 const chatForm = document.querySelector("#chat-form");
 const messageInput = document.querySelector("#message-input");
-const typhoonApiKeyInput = document.querySelector("#typhoon-api-key");
-const geminiApiKeyInput = document.querySelector("#gemini-api-key");
-const groundedProviderInput = document.querySelector("#grounded-provider");
-const conversationProviderInput = document.querySelector("#conversation-provider");
-const topKInput = document.querySelector("#top-k");
-const temperatureInput = document.querySelector("#temperature");
 const sendButton = document.querySelector("#send-btn");
 const clearButton = document.querySelector("#clear-btn");
-const reloadButton = document.querySelector("#reload-btn");
 const template = document.querySelector("#message-template");
 const themeToggleButton = document.querySelector("#theme-toggle");
 const sidebarToggleButton = document.querySelector("#sidebar-toggle");
@@ -56,37 +48,6 @@ sidebarToggleButton.addEventListener("click", () => {
   const isOpen = sidebar.classList.toggle("is-open");
   sidebarToggleButton.setAttribute("aria-expanded", String(isOpen));
 });
-
-function restoreSettings() {
-  const serverGroundedDefault = state.sidebar.default_grounded_provider || "typhoon";
-  const serverConversationDefault = state.sidebar.default_conversation_provider || "typhoon";
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    topKInput.value = String(saved.top_k || 5);
-    temperatureInput.value = String(saved.temperature ?? 0.2);
-    groundedProviderInput.value =
-      saved.grounded_provider && saved.grounded_provider !== "auto"
-        ? saved.grounded_provider
-        : serverGroundedDefault;
-    conversationProviderInput.value =
-      saved.conversation_provider && saved.conversation_provider !== "auto"
-        ? saved.conversation_provider
-        : serverConversationDefault;
-  } catch {
-    groundedProviderInput.value = serverGroundedDefault;
-    conversationProviderInput.value = serverConversationDefault;
-  }
-}
-
-function persistSettings() {
-  const payload = {
-    top_k: Number(topKInput.value) || 5,
-    temperature: Number(temperatureInput.value) || 0.2,
-    grounded_provider: groundedProviderInput.value,
-    conversation_provider: conversationProviderInput.value,
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-}
 
 function appendMessage(role, text, options = {}) {
   const node = template.content.firstElementChild.cloneNode(true);
@@ -184,40 +145,23 @@ function escapeHtml(text) {
 
 function setBusy(isBusy) {
   sendButton.disabled = isBusy;
-  reloadButton.disabled = isBusy;
   messageInput.disabled = isBusy;
   sendButton.textContent = isBusy ? "Sending..." : "Send";
 }
 
 function describeMode(mode) {
-  if (mode === "grounded") {
-    return "ตอบจากเอกสาร";
-  }
-  if (mode === "conversation") {
-    return "ตอบแบบ AI";
-  }
-  if (mode === "assistant_fallback") {
-    return "โหมด fallback";
-  }
-  if (mode === "needs_provider") {
-    return "ต้องมี API key";
-  }
-  if (mode === "provider_error") {
-    return "provider error";
-  }
-  if (mode === "no_documents") {
-    return "ยังไม่มีเอกสาร";
-  }
+  if (mode === "grounded") return "ตอบจากเอกสาร";
+  if (mode === "conversation") return "ตอบแบบ AI";
+  if (mode === "assistant_fallback") return "โหมด fallback";
+  if (mode === "needs_provider") return "ต้องมี API key";
+  if (mode === "provider_error") return "provider error";
+  if (mode === "no_documents") return "ยังไม่มีเอกสาร";
   return mode || "response";
 }
 
 function describeProvider(provider) {
-  if (!provider) {
-    return "";
-  }
-  if (provider === "local") {
-    return "local";
-  }
+  if (!provider) return "";
+  if (provider === "local") return "local";
   return provider;
 }
 
@@ -235,58 +179,18 @@ async function postJson(url, payload = {}) {
   return data;
 }
 
-function renderSidebar(sidebar) {
-  state.sidebar = sidebar;
-  document.querySelector("#doc-count").textContent = sidebar.doc_count;
-  document.querySelector("#chunk-count").textContent = sidebar.chunk_count;
-  document.querySelector("#char-count").textContent = sidebar.char_count;
-
-  const fileList = document.querySelector("#file-list");
-  fileList.replaceChildren();
-
-  if (!sidebar.files || sidebar.files.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "empty-note";
-    empty.textContent = "ยังไม่มีเอกสารในโฟลเดอร์ data";
-    fileList.appendChild(empty);
-    return;
-  }
-
-  sidebar.files.forEach((file) => {
-    const item = document.createElement("article");
-    item.className = "file-item";
-    item.innerHTML = `
-      <div>
-        <strong>${escapeHtml(file.source)}</strong>
-        <p>${file.chunks} chunks · ${file.chars} chars</p>
-      </div>
-      <span>${escapeHtml(file.ext)}</span>
-    `;
-    fileList.appendChild(item);
-  });
-}
-
 function buildPayload(message, history) {
   return {
     message,
-    typhoon_api_key: typhoonApiKeyInput.value.trim() || null,
-    gemini_api_key: geminiApiKeyInput.value.trim() || null,
-    top_k: Number(topKInput.value) || 5,
-    temperature: Number(temperatureInput.value) || 0.2,
     history,
-    grounded_provider: groundedProviderInput.value,
-    conversation_provider: conversationProviderInput.value,
   };
 }
 
 chatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = messageInput.value.trim();
-  if (!message) {
-    return;
-  }
+  if (!message) return;
 
-  persistSettings();
   const history = state.messages.slice(-8);
   appendMessage("user", message);
   messageInput.value = "";
@@ -321,42 +225,12 @@ messageInput.addEventListener("keydown", (event) => {
   }
 });
 
-reloadButton.addEventListener("click", async () => {
-  setBusy(true);
-  try {
-    const sidebar = await postJson("/api/reload");
-    renderSidebar(sidebar);
-    appendMessage("assistant", "รีโหลดเอกสารเรียบร้อยแล้ว", {
-      meta: "knowledge base refreshed",
-      persist: false,
-    });
-  } catch (error) {
-    appendMessage("assistant", error.message, { meta: "reload failed", isError: true });
-  } finally {
-    setBusy(false);
-  }
-});
-
 clearButton.addEventListener("click", () => {
   state.messages = [];
   chatLog.replaceChildren();
   appendMessage(
     "assistant",
-    "พร้อมใช้งานครับ จะถามคุยทั่วไปก่อน หรือถามจากไฟล์ในโฟลเดอร์ data ก็ได้",
+    "สวัสดีครับ ถามเรื่องการประกอบคอมพิวเตอร์ได้เลย ระบบจะค้นหาจากเอกสารวิจัยและอ้างอิงแหล่งที่มาให้",
     { persist: false },
   );
 });
-
-[
-  typhoonApiKeyInput,
-  geminiApiKeyInput,
-  groundedProviderInput,
-  conversationProviderInput,
-  topKInput,
-  temperatureInput,
-].forEach((element) => {
-  element.addEventListener("change", persistSettings);
-  element.addEventListener("input", persistSettings);
-});
-
-restoreSettings();

@@ -13,166 +13,39 @@
     <link rel="stylesheet" href="/static/app.css" />
   </head>
   <body>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="สลับโหมดสว่าง/มืด" title="สลับโหมดสว่าง/มืด">
+      <span class="theme-icon-light">☀️</span>
+      <span class="theme-icon-dark">🌙</span>
+    </button>
+
     <div class="page-shell">
       <aside class="sidebar">
         <div class="brand-card">
-          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="สลับโหมดสว่าง/มืด" title="สลับโหมดสว่าง/มืด">
-            <span class="theme-icon-light">☀️</span>
-            <span class="theme-icon-dark">🌙</span>
-          </button>
-          <p class="eyebrow">Hybrid AI + RAG</p>
           <h1>ChatBot-Research</h1>
           <p class="lede">
             ถามคุยทั่วไปได้แบบ AI assistant และเมื่อมีข้อมูลในไฟล์ ระบบจะดึงจากเอกสารมาตอบอย่างชัดเจนพร้อมอ้างอิง
           </p>
         </div>
 
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Providers</h2>
-            <span
-              class="status-pill {{ 'online' if sidebar.has_typhoon_key or sidebar.has_gemini_key else 'offline' }}"
-            >
-              {{ 'Server key ready' if sidebar.has_typhoon_key or sidebar.has_gemini_key else 'Need API key' }}
-            </span>
-          </div>
-
-          <details class="provider-grid-details">
-            <summary class="provider-summary">
-              <span class="provider-summary-badges">
-                <span class="mini-pill {{ 'online' if sidebar.has_typhoon_key else 'offline' }}">Typhoon {{ 'ready' if sidebar.has_typhoon_key else 'empty' }}</span>
-                <span class="mini-pill {{ 'online' if sidebar.has_gemini_key else 'offline' }}">Gemini {{ 'ready' if sidebar.has_gemini_key else 'empty' }}</span>
-              </span>
-              <span class="provider-summary-toggle">API keys</span>
-            </summary>
-            <div class="provider-grid">
-              <article class="provider-card">
-                <div class="provider-head">
-                  <strong>Typhoon</strong>
-                  <span class="mini-pill {{ 'online' if sidebar.has_typhoon_key else 'offline' }}">
-                    {{ 'ready' if sidebar.has_typhoon_key else 'empty' }}
-                  </span>
-                </div>
-                <p>{{ sidebar.typhoon_model }}</p>
-                <label class="field">
-                  <span>Typhoon API Key</span>
-                  <input id="typhoon-api-key" type="password" placeholder="sk-..." />
-                </label>
-              </article>
-
-              <article class="provider-card">
-                <div class="provider-head">
-                  <strong>Gemini</strong>
-                  <span class="mini-pill {{ 'online' if sidebar.has_gemini_key else 'offline' }}">
-                    {{ 'ready' if sidebar.has_gemini_key else 'empty' }}
-                  </span>
-                </div>
-                <p>{{ sidebar.gemini_model }}</p>
-                <label class="field">
-                  <span>Gemini API Key</span>
-                  <input id="gemini-api-key" type="password" placeholder="AIza..." />
-                </label>
-              </article>
-            </div>
-          </details>
-
-          <div class="inline-fields">
-            <label class="field">
-              <span>Grounded answers</span>
-              <select id="grounded-provider">
-                <option value="auto">Auto</option>
-                <option value="gemini">Gemini</option>
-                <option value="typhoon">Typhoon</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>General chat</span>
-              <select id="conversation-provider">
-                <option value="auto">Auto</option>
-                <option value="gemini">Gemini</option>
-                <option value="typhoon">Typhoon</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="inline-fields">
-            <label class="field">
-              <span>Top-K</span>
-              <input id="top-k" type="number" min="1" max="10" value="5" />
-            </label>
-            <label class="field">
-              <span>Temperature</span>
-              <input id="temperature" type="number" min="0" max="1" step="0.1" value="0.2" />
-            </label>
-          </div>
-        </section>
-
-        <section class="panel">
-          <details class="kb-details">
-            <summary class="kb-summary">
-              <h2>Knowledge Base</h2>
-              <span class="kb-summary-stats">
-                <span class="mini-pill online">{{ sidebar.doc_count }} files</span>
-                <span class="mini-pill online">{{ sidebar.chunk_count }} chunks</span>
-              </span>
-            </summary>
-            <div class="kb-content">
-              <div class="panel-head">
-                <button id="reload-btn" class="ghost-button" type="button">Reload</button>
-              </div>
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <span>Files</span>
-                  <strong id="doc-count">{{ sidebar.doc_count }}</strong>
-                </div>
-                <div class="stat-card">
-                  <span>Chunks</span>
-                  <strong id="chunk-count">{{ sidebar.chunk_count }}</strong>
-                </div>
-                <div class="stat-card">
-                  <span>Chars</span>
-                  <strong id="char-count">{{ sidebar.char_count }}</strong>
-                </div>
-              </div>
-              <p class="data-path">{{ sidebar.data_dir }}</p>
-              <div id="file-list" class="file-list">
-                {% if sidebar.files %}
-                  {% for file in sidebar.files %}
-                    <article class="file-item">
-                      <div>
-                        <strong>{{ file.source }}</strong>
-                        <p>{{ file.chunks }} chunks · {{ file.chars }} chars</p>
-                      </div>
-                      <span>{{ file.ext }}</span>
-                    </article>
-                  {% endfor %}
-                {% else %}
-                  <p class="empty-note">ยังไม่มีเอกสารในโฟลเดอร์ data</p>
-                {% endif %}
-              </div>
-            </div>
-          </details>
-        </section>
       </aside>
 
       <main class="chat-stage">
-        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="เปิด/ปิดเมนูตั้งค่า" aria-expanded="false">
+        <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="เปิด/ปิดแถบข้อมูล" aria-expanded="false">
           <span class="sidebar-toggle-icon">☰</span>
-          <span>ตั้งค่า &amp; Knowledge Base</span>
+          <span>ข้อมูลระบบ</span>
         </button>
 
         <section class="hero">
-          <p class="eyebrow">AI Web Chat</p>
-          <h2>เรื่องที่จะถาม</h2>
-          <p title="ถ้าคำถามเป็นเรื่องทั่วไป ระบบจะตอบแบบผู้ช่วย AI ปกติ แต่ถ้าคำถามอิงเอกสารที่โหลดไว้ ระบบจะดึงบริบทจากไฟล์มาตอบโดยตรง">
-            ถ้าคำถามเป็นเรื่องทั่วไป ระบบจะตอบแบบผู้ช่วย AI ปกติ แต่ถ้าคำถามอิงเอกสารที่โหลดไว้ ระบบจะดึงบริบทจากไฟล์มาตอบโดยตรง
+          <h2>ถามเรื่องการประกอบคอมพิวเตอร์</h2>
+          <p>
+            ระบบค้นหาข้อมูลจากเอกสารวิจัยภาษาไทย 100+ ฉบับ แล้วตอบพร้อมอ้างอิงแหล่งที่มา
           </p>
         </section>
 
         <section id="chat-log" class="chat-log">
           <article class="message assistant">
             <div class="bubble">
-              <p>พร้อมใช้งานครับ จะถามคุยทั่วไปก่อน หรือถามจากไฟล์ในโฟลเดอร์ <code>data</code> ก็ได้</p>
+              <p>สวัสดีครับ ถามเรื่องการประกอบคอมพิวเตอร์ได้เลย ระบบจะค้นหาจากเอกสารวิจัยและอ้างอิงแหล่งที่มาให้</p>
             </div>
           </article>
         </section>
@@ -184,7 +57,7 @@
               id="message-input"
               rows="2"
               maxlength="4000"
-              placeholder="พิมพ์คำถามทั่วไป หรือถามสิ่งที่อยู่ในเอกสารของคุณ..."
+              placeholder="เช่น ควรเลือก CPU รุ่นไหน, RAM ขนาดเท่าไหร่ดี, ราคาประมาณเท่าไหร่..."
               required
             ></textarea>
           </label>
