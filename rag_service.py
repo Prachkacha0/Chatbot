@@ -32,36 +32,25 @@ NO_ANSWER = (
     "ผมยังไม่พบข้อมูลมากพอที่จะตอบคำถามนี้ได้อย่างชัดเจน"
 )
 
-GROUNDING_SYSTEM_PROMPT = """You are ChatBot-Research, acting as the user's personal secretary
-(เลขาส่วนตัว) — proactive, warm, and genuinely helpful, not a document-lookup
-tool. You have access to a document library as an extra source of information.
+GROUNDING_SYSTEM_PROMPT = """You are ChatBot-Research, a research assistant that answers questions
+about computer assembly strictly from the provided document context.
 
-Some document passages that may be relevant to the user's question are
-included in the prompt below. Follow these rules:
-
-1. If the retrieved document context directly answers the question, use it as
-   your primary source and cite the relevant filename.
-2. If the document context is only partially relevant, combine it with your
-   own general knowledge to give the most complete, helpful answer.
-3. If the document context is not actually relevant to the question, ignore
-   it completely and just answer normally from your own general knowledge,
-   exactly like a competent personal secretary would. NEVER refuse to answer,
-   say you don't have enough information, or stay silent just because the
-   documents do not cover the topic — always give the user your best helpful
-   answer.
-4. Never claim a document says something it does not say, and never present a
-   guess as if it were a verified quote from a document.
+Rules:
+1. Answer ONLY using information from the DOCUMENT CONTEXT provided. Do not
+   use outside knowledge, general knowledge, or make assumptions beyond what
+   the documents say.
+2. If the document context contains the answer, use it directly and cite the
+   source filename.
+3. If the document context does not contain enough information to answer the
+   question, respond with: "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร
+   กรุณาถามเกี่ยวกับการประกอบคอมพิวเตอร์ครับ"
+4. Never guess, infer, or add information not found in the documents.
 5. Use recent conversation to understand the user's intent.
-6. Keep your tone natural, warm, and human, like a trusted assistant speaking
-   to someone they support daily. Do not sound robotic.
+6. Keep your tone natural and clear.
 7. Answer in the same language as the user.
 8. Default to a short, direct answer: a few sentences or a short list (roughly
    3-5 bullet points) covering only what the question actually asked for.
-   Only give a long, fully detailed answer (many sections, sub-steps) when the
-   user explicitly asks for full detail, a complete guide, or asks you to
-   elaborate. When the question is broad and could span many topics, answer
-   the most important 2-3 points first and offer to go deeper instead of
-   dumping everything at once.
+   Only give a long detailed answer when the user explicitly asks for it.
 """
 
 CONVERSATION_SYSTEM_TEMPLATE = """You are ChatBot-Research, acting as the user's personal secretary
@@ -367,11 +356,8 @@ def build_grounded_prompt(question: str, passages: list[Passage], history: list[
         f"{build_context(passages)}\n\n"
         "USER QUESTION:\n"
         f"{question}\n\n"
-        "Use the DOCUMENT CONTEXT as your primary source when it is relevant."
-        " If it is not relevant to the question, ignore it and answer from your"
-        " own knowledge instead, like a helpful personal secretary would. Use"
-        " the RECENT CONVERSATION to interpret what the user means. Never"
-        " refuse to answer just because the documents don't cover the topic."
+        "Answer ONLY from the DOCUMENT CONTEXT above. Do not use outside knowledge."
+        " If the context does not contain enough information, say so clearly."
     )
 
 
@@ -583,7 +569,16 @@ def answer_question(
     conversation_choice = normalize_provider_choice(conversation_provider, settings.default_conversation_provider)
     kb_files = [item.source for item in kb.current_index().files]
     social_only = is_social_message(question)
-    passages = [] if social_only else kb.retrieve(question, top_k=top_k)
+    if social_only:
+        return {
+            "answer": local_conversation_fallback(question, kb_files),
+            "passages": [],
+            "elapsed": round(time.time() - started_at, 3),
+            "mode": "assistant_fallback",
+            "provider_used": "local",
+        }
+
+    passages = kb.retrieve(question, top_k=top_k)
 
     if passages:
         prompt = build_grounded_prompt(question, passages, chat_history)
@@ -644,39 +639,13 @@ def answer_question(
             "provider_used": provider_name,
         }
 
-    conversation_prompt = build_conversation_prompt(question, chat_history)
-    for candidate_name, candidate_key in available_provider_candidates(
-        conversation_choice,
-        typhoon_api_key,
-        gemini_api_key,
-    ):
-        provider = _provider_instance(candidate_name, settings)
-        try:
-            answer = provider.conversation(
-                api_key=candidate_key,
-                prompt=conversation_prompt,
-                system_instruction=conversation_system(kb_files),
-                temperature=max(temperature, 0.45),
-                history=chat_history,
-            )
-            if answer:
-                return {
-                    "answer": answer,
-                    "passages": [],
-                    "elapsed": round(time.time() - started_at, 3),
-                    "mode": "conversation",
-                    "provider_used": candidate_name,
-                }
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Conversation provider %s failed: %s", candidate_name, exc)
-            continue
-
+    # Strict RAG: ถ้าไม่เจอ passages และไม่ใช่ทักทาย → ไม่ตอบนอก dataset
     return {
-        "answer": local_conversation_fallback(question, kb_files),
+        "answer": "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร กรุณาถามเกี่ยวกับการประกอบคอมพิวเตอร์ครับ",
         "passages": [],
         "elapsed": round(time.time() - started_at, 3),
-        "mode": "assistant_fallback",
-        "provider_used": "local",
+        "mode": "no_documents",
+        "provider_used": "none",
     }
 
 
