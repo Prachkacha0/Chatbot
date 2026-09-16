@@ -123,8 +123,10 @@ class Settings:
     typhoon_base_url: str = field(default_factory=lambda: os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1"))
     typhoon_model: str = field(default_factory=lambda: os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct")))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
+    embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
     min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.05))
+    semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.6))
     default_grounded_provider: str = field(default_factory=lambda: os.getenv("GROUNDED_PROVIDER", "typhoon").lower())
     default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
 
@@ -159,6 +161,7 @@ class RetrievalIndex:
     word_vectorizer: TfidfVectorizer | None
     char_vectorizer: TfidfVectorizer | None
     matrix: Any
+    embeddings: np.ndarray | None
     files: list[IndexedFile]
 
 
@@ -236,6 +239,34 @@ def chunk_text(text: str, source: str, size: int = 1200, overlap: int = 200) -> 
     return chunks
 
 
+def _embed_texts(texts: list[str], model: str, api_key: str) -> np.ndarray | None:
+    """Embed a batch of texts with the Gemini embedding API. Returns None (instead of
+    raising) on any failure so callers can fall back to TF-IDF-only retrieval."""
+    if not texts or not api_key:
+        return None
+    try:
+        client = genai.Client(api_key=api_key, http_options={"timeout": 45_000})
+        # The API caps how many texts can be embedded per call, so batch requests.
+        batch_size = 100
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), batch_size):
+            batch = texts[start : start + batch_size]
+            response = client.models.embed_content(model=model, contents=batch)
+            vectors.extend(embedding.values for embedding in response.embeddings)
+        return np.array(vectors, dtype=np.float32)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Embedding request failed, falling back to keyword-only retrieval: %s", exc)
+        return None
+
+
+def _cosine_scores(query_vector: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    query_norm = np.linalg.norm(query_vector)
+    matrix_norms = np.linalg.norm(matrix, axis=1)
+    denom = matrix_norms * query_norm
+    denom[denom == 0] = 1e-9
+    return (matrix @ query_vector) / denom
+
+
 def data_signature() -> tuple[Any, ...]:
     signature = []
     pattern = str(DATA_DIR / "**" / "*")
@@ -247,7 +278,8 @@ def data_signature() -> tuple[Any, ...]:
     return tuple(signature)
 
 
-def build_index(signature: tuple[Any, ...]) -> RetrievalIndex:
+def build_index(signature: tuple[Any, ...], settings: Settings | None = None) -> RetrievalIndex:
+    settings = settings or Settings()
     documents = load_documents()
     chunks: list[dict[str, str]] = []
     files: list[IndexedFile] = []
@@ -270,6 +302,7 @@ def build_index(signature: tuple[Any, ...]) -> RetrievalIndex:
             word_vectorizer=None,
             char_vectorizer=None,
             matrix=None,
+            embeddings=None,
             files=[],
         )
 
@@ -280,12 +313,16 @@ def build_index(signature: tuple[Any, ...]) -> RetrievalIndex:
     char_matrix = char_vectorizer.fit_transform(texts)
     matrix = hstack([word_matrix, char_matrix])
 
+    gemini_key = resolve_api_key("gemini")
+    embeddings = _embed_texts(texts, settings.embedding_model, gemini_key)
+
     return RetrievalIndex(
         signature=signature,
         chunks=chunks,
         word_vectorizer=word_vectorizer,
         char_vectorizer=char_vectorizer,
         matrix=matrix,
+        embeddings=embeddings,
         files=sorted(files, key=lambda item: item.source),
     )
 
@@ -374,13 +411,13 @@ class KnowledgeBase:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
         self._lock = threading.Lock()
-        self._index = build_index(data_signature())
+        self._index = build_index(data_signature(), self.settings)
 
     def refresh(self, force: bool = False) -> RetrievalIndex:
         signature = data_signature()
         with self._lock:
             if force or signature != self._index.signature:
-                self._index = build_index(signature)
+                self._index = build_index(signature, self.settings)
             return self._index
 
     def current_index(self) -> RetrievalIndex:
@@ -395,7 +432,23 @@ class KnowledgeBase:
         word_query = index.word_vectorizer.transform([query])
         char_query = index.char_vectorizer.transform([query])
         query_vector = hstack([word_query, char_query])
-        scores = cosine_similarity(query_vector, index.matrix)[0]
+        keyword_scores = cosine_similarity(query_vector, index.matrix)[0]
+
+        if index.embeddings is not None:
+            query_embedding = _embed_texts([query], self.settings.embedding_model, resolve_api_key("gemini"))
+        else:
+            query_embedding = None
+
+        if query_embedding is not None:
+            semantic_scores = _cosine_scores(query_embedding[0], index.embeddings)
+            # Both score arrays are cosine similarities in [-1, 1] (in practice
+            # mostly [0, 1]), so a plain weighted sum keeps them comparable
+            # without needing separate normalization.
+            weight = self.settings.semantic_weight
+            scores = (1 - weight) * keyword_scores + weight * semantic_scores
+        else:
+            scores = keyword_scores
+
         ranked = np.argsort(scores)[::-1][:effective_top_k]
 
         passages: list[Passage] = []
