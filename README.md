@@ -1,6 +1,6 @@
 # ChatBot-Research
 
-ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับการประกอบคอมพิวเตอร์ โดยใช้ชุดข้อมูลภาษาไทย (15 บท 60 หัวข้อย่อย 2,880 คู่คำถาม-คำตอบ) เป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
+ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับการประกอบคอมพิวเตอร์ โดยใช้ชุดข้อมูลภาษาไทย (6 บท 626 คู่คำถาม-คำตอบ) เป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
 
 ## Features
 

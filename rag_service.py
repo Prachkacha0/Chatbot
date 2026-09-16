@@ -125,7 +125,7 @@ class Settings:
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
-    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.05))
+    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.13))
     semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.6))
     default_grounded_provider: str = field(default_factory=lambda: os.getenv("GROUNDED_PROVIDER", "typhoon").lower())
     default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
