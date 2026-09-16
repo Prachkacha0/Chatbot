@@ -125,7 +125,7 @@ class Settings:
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
-    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.13))
+    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.10))
     semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.6))
     default_grounded_provider: str = field(default_factory=lambda: os.getenv("GROUNDED_PROVIDER", "typhoon").lower())
     default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
@@ -503,7 +503,9 @@ class TyphoonProvider:
         # Bound the call so a slow/hanging Typhoon request fails fast enough
         # for the caller (or the auto-fallback logic) to react instead of
         # hanging until the deployment platform's own gateway times out.
-        return OpenAI(api_key=api_key, base_url=self.settings.typhoon_base_url, timeout=45.0)
+        # max_retries=0 so a single slow attempt can't multiply the wall-clock
+        # timeout (the SDK retries failed/timed-out requests by default).
+        return OpenAI(api_key=api_key, base_url=self.settings.typhoon_base_url, timeout=25.0, max_retries=0)
 
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
         client = self._client(api_key)
@@ -550,7 +552,10 @@ class GeminiProvider:
         self.settings = settings
 
     def _client(self, api_key: str) -> genai.Client:
-        return genai.Client(api_key=api_key, http_options={"timeout": 45_000})
+        # Short timeout, no built-in retries: a hanging/high-demand Gemini
+        # response should fail fast so the caller's fallback to the next
+        # provider actually happens within the request's own time budget.
+        return genai.Client(api_key=api_key, http_options={"timeout": 25_000, "retry_options": {"attempts": 1}})
 
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
         client = self._client(api_key)
