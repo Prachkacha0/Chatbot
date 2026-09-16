@@ -4,6 +4,7 @@ import glob
 import json
 import logging
 import os
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -151,6 +152,7 @@ class Settings:
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
     min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.10))
     semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.6))
+    exact_qa_threshold: float = field(default_factory=lambda: _env_float("EXACT_QA_THRESHOLD", 0.85))
     default_grounded_provider: str = field(default_factory=lambda: os.getenv("GROUNDED_PROVIDER", "typhoon").lower())
     default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
 
@@ -179,6 +181,13 @@ class IndexedFile:
 
 
 @dataclass
+class QAPair:
+    source: str
+    question: str
+    answer: str
+
+
+@dataclass
 class RetrievalIndex:
     signature: tuple[Any, ...]
     chunks: list[dict[str, str]]
@@ -187,6 +196,9 @@ class RetrievalIndex:
     matrix: Any
     embeddings: np.ndarray | None
     files: list[IndexedFile]
+    qa_pairs: list[QAPair]
+    qa_vectorizer: TfidfVectorizer | None
+    qa_matrix: Any
 
 
 def _normalize_source(path: Path) -> str:
@@ -263,6 +275,27 @@ def chunk_text(text: str, source: str, size: int = 1200, overlap: int = 200) -> 
     return chunks
 
 
+_QA_PATTERN = re.compile(
+    r"-\s*\*\*Question:\*\*\s*(?P<question>.+?)\s*\n"
+    r"-\s*\*\*Answer:\*\*\s*(?P<answer>.+?)(?=\n\n|\n###|\n##|\Z)",
+    re.DOTALL,
+)
+
+
+def parse_qa_pairs(text: str, source: str) -> list[QAPair]:
+    """Extract Question/Answer pairs from the "- **Question:** ... \\n
+    - **Answer:** ..." markdown format our datasets use, so exact questions
+    can be matched and answered verbatim instead of going through chunk
+    retrieval + LLM paraphrasing."""
+    pairs: list[QAPair] = []
+    for match in _QA_PATTERN.finditer(text):
+        question = " ".join(match.group("question").split())
+        answer = " ".join(match.group("answer").split())
+        if question and answer:
+            pairs.append(QAPair(source=source, question=question, answer=answer))
+    return pairs
+
+
 def _embed_texts(texts: list[str], model: str, api_key: str) -> np.ndarray | None:
     """Embed a batch of texts with the Gemini embedding API. Returns None (instead of
     raising) on any failure so callers can fall back to TF-IDF-only retrieval."""
@@ -307,9 +340,11 @@ def build_index(signature: tuple[Any, ...], settings: Settings | None = None) ->
     documents = load_documents()
     chunks: list[dict[str, str]] = []
     files: list[IndexedFile] = []
+    qa_pairs: list[QAPair] = []
     for document in documents:
         doc_chunks = chunk_text(document.text, document.source)
         chunks.extend(doc_chunks)
+        qa_pairs.extend(parse_qa_pairs(document.text, document.source))
         files.append(
             IndexedFile(
                 source=document.source,
@@ -318,6 +353,12 @@ def build_index(signature: tuple[Any, ...], settings: Settings | None = None) ->
                 chunks=len(doc_chunks),
             )
         )
+
+    qa_vectorizer: TfidfVectorizer | None = None
+    qa_matrix: Any = None
+    if qa_pairs:
+        qa_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+        qa_matrix = qa_vectorizer.fit_transform([pair.question for pair in qa_pairs])
 
     if not chunks:
         return RetrievalIndex(
@@ -328,6 +369,9 @@ def build_index(signature: tuple[Any, ...], settings: Settings | None = None) ->
             matrix=None,
             embeddings=None,
             files=[],
+            qa_pairs=qa_pairs,
+            qa_vectorizer=qa_vectorizer,
+            qa_matrix=qa_matrix,
         )
 
     texts = [chunk["text"] for chunk in chunks]
@@ -348,6 +392,9 @@ def build_index(signature: tuple[Any, ...], settings: Settings | None = None) ->
         matrix=matrix,
         embeddings=embeddings,
         files=sorted(files, key=lambda item: item.source),
+        qa_pairs=qa_pairs,
+        qa_vectorizer=qa_vectorizer,
+        qa_matrix=qa_matrix,
     )
 
 
@@ -446,6 +493,23 @@ class KnowledgeBase:
 
     def current_index(self) -> RetrievalIndex:
         return self.refresh()
+
+    def match_exact_qa(self, query: str) -> QAPair | None:
+        """Find a dataset question that matches the user's question closely
+        enough to answer with the dataset's own wording verbatim, instead of
+        going through chunk retrieval + LLM paraphrasing. Returns None when no
+        question clears the configured similarity threshold."""
+        index = self.current_index()
+        if not index.qa_pairs or index.qa_vectorizer is None:
+            return None
+
+        query_vector = index.qa_vectorizer.transform([query])
+        scores = cosine_similarity(query_vector, index.qa_matrix)[0]
+        best_idx = int(np.argmax(scores))
+        best_score = float(scores[best_idx])
+        if best_score < self.settings.exact_qa_threshold:
+            return None
+        return index.qa_pairs[best_idx]
 
     def retrieve(self, query: str, top_k: int | None = None) -> list[Passage]:
         index = self.current_index()
@@ -658,6 +722,18 @@ def answer_question(
             "elapsed": round(time.time() - started_at, 3),
             "mode": "assistant_fallback",
             "provider_used": "local",
+        }
+
+    exact_match = kb.match_exact_qa(question)
+    if exact_match is not None:
+        return {
+            "answer": exact_match.answer,
+            "passages": [
+                {"source": exact_match.source, "text": exact_match.answer, "score": 1.0}
+            ],
+            "elapsed": round(time.time() - started_at, 3),
+            "mode": "exact_match",
+            "provider_used": "dataset",
         }
 
     passages = kb.retrieve(question, top_k=top_k)

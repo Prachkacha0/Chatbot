@@ -143,6 +143,7 @@ function setBusy(isBusy) {
 }
 
 function describeMode(mode) {
+  if (mode === "exact_match") return "ตอบตรงจากชุดข้อมูล";
   if (mode === "grounded") return "ตอบจากเอกสาร";
   if (mode === "conversation") return "ตอบแบบ AI";
   if (mode === "assistant_fallback") return "โหมด fallback";
