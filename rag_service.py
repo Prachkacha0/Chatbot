@@ -53,6 +53,30 @@ Rules:
    Only give a long detailed answer when the user explicitly asks for it.
 """
 
+GENERAL_COMPUTER_SYSTEM_PROMPT = """You are ChatBot-Research, a research assistant for a
+computer-assembly research project. The document knowledge base did NOT contain
+an answer to this question, so you are answering from your own general knowledge
+instead — but ONLY because the question is about computers, hardware, or
+information technology.
+
+Rules:
+1. First check: is this question about computers, computer hardware, software,
+   or information technology in a general sense? If NOT (e.g. food, travel,
+   weather, unrelated small talk), respond ONLY with: "ขออภัยครับ
+   ผมตอบได้เฉพาะเรื่องคอมพิวเตอร์เท่านั้นครับ"
+2. If it IS about computers, answer helpfully and accurately from your own
+   knowledge.
+3. Always start the answer by making clear this is general knowledge, not from
+   the research documents — for example begin with something like
+   "เรื่องนี้ไม่มีในเอกสารวิจัยที่ใช้ครับ แต่ตามความรู้ทั่วไป ...". Never imply
+   the answer came from the loaded documents.
+4. Keep your tone natural and clear.
+5. Answer in the same language as the user.
+6. Default to a short, direct answer: a few sentences or a short list (roughly
+   3-5 bullet points). Only give a long detailed answer when the user
+   explicitly asks for it.
+"""
+
 CONVERSATION_SYSTEM_TEMPLATE = """You are ChatBot-Research, acting as the user's personal secretary
 (เลขาส่วนตัว) — proactive, warm, and genuinely helpful.
 
@@ -686,24 +710,67 @@ def answer_question(
                 "provider_used": "none",
             }
 
+        # The retrieved passages can score above the relevance threshold while
+        # still being off-topic for this specific question (TF-IDF matches on
+        # shared words, not shared meaning). When that happens the grounded
+        # provider itself declines per the system prompt -- fall through to
+        # general computer knowledge instead of surfacing that refusal, same
+        # as the "no passages retrieved" case below.
+        if "ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร" not in answer:
+            return {
+                "answer": answer,
+                "passages": [
+                    {"source": passage.source, "text": passage.text, "score": passage.score}
+                    for passage in passages
+                ],
+                "elapsed": round(time.time() - started_at, 3),
+                "mode": "grounded",
+                "provider_used": provider_name,
+            }
+
+    # No usable passages in the dataset (either none retrieved, or the
+    # grounded provider itself declined). Fall back to general computer
+    # knowledge instead of an outright refusal -- the system prompt itself
+    # still refuses anything unrelated to computers, and always discloses
+    # that the answer isn't from the research documents.
+    general_prompt = build_conversation_prompt(question, chat_history)
+    answer = ""
+    provider_name = ""
+    for candidate_name, candidate_key in available_provider_candidates(
+        conversation_choice,
+        typhoon_api_key,
+        gemini_api_key,
+    ):
+        provider = _provider_instance(candidate_name, settings)
+        try:
+            answer = provider.conversation(
+                api_key=candidate_key,
+                prompt=general_prompt,
+                system_instruction=GENERAL_COMPUTER_SYSTEM_PROMPT,
+                temperature=temperature,
+                history=chat_history,
+            )
+            provider_name = candidate_name
+            break
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("General-knowledge provider %s failed: %s", candidate_name, exc)
+            continue
+
+    if not answer:
         return {
-            "answer": answer,
-            "passages": [
-                {"source": passage.source, "text": passage.text, "score": passage.score}
-                for passage in passages
-            ],
+            "answer": "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร กรุณาถามเกี่ยวกับการประกอบคอมพิวเตอร์ครับ",
+            "passages": [],
             "elapsed": round(time.time() - started_at, 3),
-            "mode": "grounded",
-            "provider_used": provider_name,
+            "mode": "no_documents",
+            "provider_used": "none",
         }
 
-    # Strict RAG: ถ้าไม่เจอ passages และไม่ใช่ทักทาย → ไม่ตอบนอก dataset
     return {
-        "answer": "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร กรุณาถามเกี่ยวกับการประกอบคอมพิวเตอร์ครับ",
+        "answer": answer,
         "passages": [],
         "elapsed": round(time.time() - started_at, 3),
-        "mode": "no_documents",
-        "provider_used": "none",
+        "mode": "conversation",
+        "provider_used": provider_name,
     }
 
 
