@@ -1,0 +1,1181 @@
+[
+  {
+    "id": "ch1-fig1",
+    "chapter": 1,
+    "figure_no": 1,
+    "caption": "ลูกคิดของชาวจีน",
+    "page": 13,
+    "file": "static/images/textbook/ch1-fig1.png",
+    "keywords": [
+      "ลูกคิด",
+      "จีน"
+    ]
+  },
+  {
+    "id": "ch1-fig2",
+    "chapter": 1,
+    "figure_no": 2,
+    "caption": "John Napier",
+    "page": 14,
+    "file": "static/images/textbook/ch1-fig2.png",
+    "keywords": [
+      "John",
+      "Napier"
+    ]
+  },
+  {
+    "id": "ch1-fig3",
+    "chapter": 1,
+    "figure_no": 3,
+    "caption": "Napier’s Bones",
+    "page": 14,
+    "file": "static/images/textbook/ch1-fig3.png",
+    "keywords": [
+      "Napier’s",
+      "Bones"
+    ]
+  },
+  {
+    "id": "ch1-fig4",
+    "chapter": 1,
+    "figure_no": 4,
+    "caption": "Blaise Pascal",
+    "page": 15,
+    "file": "static/images/textbook/ch1-fig4.png",
+    "keywords": [
+      "Blaise",
+      "Pascal"
+    ]
+  },
+  {
+    "id": "ch1-fig5",
+    "chapter": 1,
+    "figure_no": 5,
+    "caption": "เครื่องคำนวณของ Pascal",
+    "page": 15,
+    "file": "static/images/textbook/ch1-fig5.png",
+    "keywords": [
+      "เครื่อง",
+      "คำนวณ",
+      "Pascal"
+    ]
+  },
+  {
+    "id": "ch1-fig6",
+    "chapter": 1,
+    "figure_no": 6,
+    "caption": "Gottfried Wilhelm von Leibniz",
+    "page": 16,
+    "file": "static/images/textbook/ch1-fig6.png",
+    "keywords": [
+      "Gottfried",
+      "Wilhelm",
+      "von",
+      "Leibniz"
+    ]
+  },
+  {
+    "id": "ch1-fig7",
+    "chapter": 1,
+    "figure_no": 7,
+    "caption": "Leibniz’s Stepped",
+    "page": 16,
+    "file": "static/images/textbook/ch1-fig7.png",
+    "keywords": [
+      "Leibniz’s",
+      "Stepped"
+    ]
+  },
+  {
+    "id": "ch1-fig8",
+    "chapter": 1,
+    "figure_no": 8,
+    "caption": "Slide Rule",
+    "page": 17,
+    "file": "static/images/textbook/ch1-fig8.png",
+    "keywords": [
+      "Slide",
+      "Rule"
+    ]
+  },
+  {
+    "id": "ch1-fig9",
+    "chapter": 1,
+    "figure_no": 9,
+    "caption": "Charles Babbage",
+    "page": 17,
+    "file": "static/images/textbook/ch1-fig9.png",
+    "keywords": [
+      "Charles",
+      "Babbage"
+    ]
+  },
+  {
+    "id": "ch1-fig10",
+    "chapter": 1,
+    "figure_no": 10,
+    "caption": "Difference Engine",
+    "page": 17,
+    "file": "static/images/textbook/ch1-fig10.png",
+    "keywords": [
+      "Difference",
+      "Engine"
+    ]
+  },
+  {
+    "id": "ch1-fig11",
+    "chapter": 1,
+    "figure_no": 11,
+    "caption": "Analytical Engine",
+    "page": 18,
+    "file": "static/images/textbook/ch1-fig11.png",
+    "keywords": [
+      "Analytical",
+      "Engine"
+    ]
+  },
+  {
+    "id": "ch1-fig12",
+    "chapter": 1,
+    "figure_no": 12,
+    "caption": "Ada Lovelace",
+    "page": 19,
+    "file": "static/images/textbook/ch1-fig12.png",
+    "keywords": [
+      "Ada",
+      "Lovelace"
+    ]
+  },
+  {
+    "id": "ch1-fig13",
+    "chapter": 1,
+    "figure_no": 13,
+    "caption": "George Boole",
+    "page": 20,
+    "file": "static/images/textbook/ch1-fig13.png",
+    "keywords": [
+      "George",
+      "Boole"
+    ]
+  },
+  {
+    "id": "ch1-fig14",
+    "chapter": 1,
+    "figure_no": 14,
+    "caption": "Hollerrith Card",
+    "page": 20,
+    "file": "static/images/textbook/ch1-fig14.png",
+    "keywords": [
+      "Hollerrith",
+      "Card"
+    ]
+  },
+  {
+    "id": "ch1-fig15",
+    "chapter": 1,
+    "figure_no": 15,
+    "caption": "Harvard Mark I",
+    "page": 21,
+    "file": "static/images/textbook/ch1-fig15.png",
+    "keywords": [
+      "Harvard",
+      "Mark"
+    ]
+  },
+  {
+    "id": "ch1-fig16",
+    "chapter": 1,
+    "figure_no": 16,
+    "caption": "ENIAC",
+    "page": 22,
+    "file": "static/images/textbook/ch1-fig16.png",
+    "keywords": [
+      "ENIAC"
+    ]
+  },
+  {
+    "id": "ch1-fig17",
+    "chapter": 1,
+    "figure_no": 17,
+    "caption": "EDVAC",
+    "page": 22,
+    "file": "static/images/textbook/ch1-fig17.png",
+    "keywords": [
+      "EDVAC"
+    ]
+  },
+  {
+    "id": "ch1-fig18",
+    "chapter": 1,
+    "figure_no": 18,
+    "caption": "UNIVAC I",
+    "page": 23,
+    "file": "static/images/textbook/ch1-fig18.png",
+    "keywords": [
+      "UNIVAC"
+    ]
+  },
+  {
+    "id": "ch1-fig19",
+    "chapter": 1,
+    "figure_no": 19,
+    "caption": "Transistor",
+    "page": 24,
+    "file": "static/images/textbook/ch1-fig19.png",
+    "keywords": [
+      "Transistor"
+    ]
+  },
+  {
+    "id": "ch1-fig20",
+    "chapter": 1,
+    "figure_no": 20,
+    "caption": "Integrated circuit",
+    "page": 25,
+    "file": "static/images/textbook/ch1-fig20.png",
+    "keywords": [
+      "Integrated",
+      "circuit"
+    ]
+  },
+  {
+    "id": "ch1-fig21",
+    "chapter": 1,
+    "figure_no": 21,
+    "caption": "Microprocessor",
+    "page": 26,
+    "file": "static/images/textbook/ch1-fig21.png",
+    "keywords": [
+      "Microprocessor"
+    ]
+  },
+  {
+    "id": "ch2-fig1",
+    "chapter": 2,
+    "figure_no": 1,
+    "caption": "การแบ่งส่วนพื้นฐานของฮาร์ดแวร์เป็น 4 หน่วยสำคัญ",
+    "page": 28,
+    "file": "static/images/textbook/ch2-fig1.png",
+    "keywords": [
+      "การแบ่งส่วน",
+      "พื้นฐาน",
+      "ฮาร์ดแวร์",
+      "หน่วย"
+    ]
+  },
+  {
+    "id": "ch2-fig2",
+    "chapter": 2,
+    "figure_no": 2,
+    "caption": "การแสดงผลลัพธ์ที่ได้จากการประมวลผล",
+    "page": 29,
+    "file": "static/images/textbook/ch2-fig2.png",
+    "keywords": [
+      "การแสดง",
+      "ผลลัพธ์",
+      "การประมวลผล"
+    ]
+  },
+  {
+    "id": "ch2-fig3",
+    "chapter": 2,
+    "figure_no": 3,
+    "caption": "ส่วนประกอบของคอมพิวเตอร์",
+    "page": 32,
+    "file": "static/images/textbook/ch2-fig3.png",
+    "keywords": [
+      "ส่วนประกอบ",
+      "คอมพิวเตอร์"
+    ]
+  },
+  {
+    "id": "ch2-fig4",
+    "chapter": 2,
+    "figure_no": 4,
+    "caption": "แผนภาพ PMS",
+    "page": 37,
+    "file": "static/images/textbook/ch2-fig4.png",
+    "keywords": [
+      "แผนภาพ",
+      "PMS"
+    ]
+  },
+  {
+    "id": "ch2-fig5",
+    "chapter": 2,
+    "figure_no": 5,
+    "caption": "โมเดลของ Von Neumann",
+    "page": 38,
+    "file": "static/images/textbook/ch2-fig5.png",
+    "keywords": [
+      "โมเดล",
+      "Von",
+      "Neumann"
+    ]
+  },
+  {
+    "id": "ch3-fig1",
+    "chapter": 3,
+    "figure_no": 1,
+    "caption": "หน่วยประมวลผลกลาง ( Central Processing Unit : CPU )",
+    "page": 39,
+    "file": "static/images/textbook/ch3-fig1.png",
+    "keywords": [
+      "หน่วยประมวลผลกลาง",
+      "Central",
+      "Processing",
+      "Unit",
+      "CPU"
+    ]
+  },
+  {
+    "id": "ch3-fig2",
+    "chapter": 3,
+    "figure_no": 2,
+    "caption": "หน่วยความจำถาวร (Read-Only Memory : ROM)",
+    "page": 45,
+    "file": "static/images/textbook/ch3-fig2.png",
+    "keywords": [
+      "หน่วยความจำ",
+      "ถาวร",
+      "Read-Only",
+      "Memory",
+      "ROM"
+    ]
+  },
+  {
+    "id": "ch3-fig3",
+    "chapter": 3,
+    "figure_no": 3,
+    "caption": "หน่วยความจำชั่วคราว (Random - Access Memory : RAM)",
+    "page": 46,
+    "file": "static/images/textbook/ch3-fig3.png",
+    "keywords": [
+      "หน่วยความจำ",
+      "ชั่วคราว",
+      "Random",
+      "Access",
+      "Memory",
+      "RAM"
+    ]
+  },
+  {
+    "id": "ch3-fig4",
+    "chapter": 3,
+    "figure_no": 4,
+    "caption": "ส่วนประกอบของเมนบอร์ด",
+    "page": 54,
+    "file": "static/images/textbook/ch3-fig4.png",
+    "keywords": [
+      "ส่วนประกอบ",
+      "เมนบอร์ด"
+    ]
+  },
+  {
+    "id": "ch3-fig5",
+    "chapter": 3,
+    "figure_no": 5,
+    "caption": "ฮาร์ดดิสก์ (Hard Disk)",
+    "page": 56,
+    "file": "static/images/textbook/ch3-fig5.png",
+    "keywords": [
+      "ฮาร์ดดิสก์",
+      "Hard",
+      "Disk"
+    ]
+  },
+  {
+    "id": "ch3-fig6",
+    "chapter": 3,
+    "figure_no": 6,
+    "caption": "ส่วนประกอบของฮาร์ดดิสก์ (Hard Disk)",
+    "page": 57,
+    "file": "static/images/textbook/ch3-fig6.png",
+    "keywords": [
+      "ส่วนประกอบ",
+      "ฮาร์ดดิสก์",
+      "Hard",
+      "Disk"
+    ]
+  },
+  {
+    "id": "ch3-fig7",
+    "chapter": 3,
+    "figure_no": 7,
+    "caption": "ซีดีรอม (CD-ROM) และ ดีวีดี (DVD)",
+    "page": 58,
+    "file": "static/images/textbook/ch3-fig7.png",
+    "keywords": [
+      "ซีดีรอม",
+      "CD-ROM",
+      "ดีวีดี",
+      "DVD"
+    ]
+  },
+  {
+    "id": "ch3-fig8",
+    "chapter": 3,
+    "figure_no": 8,
+    "caption": "จอภาพ (Monitor)",
+    "page": 59,
+    "file": "static/images/textbook/ch3-fig8.png",
+    "keywords": [
+      "จอภาพ",
+      "Monitor"
+    ]
+  },
+  {
+    "id": "ch3-fig9",
+    "chapter": 3,
+    "figure_no": 9,
+    "caption": "เครื่องพิมพ์แบบจุด (Dot Matrix Printer)",
+    "page": 60,
+    "file": "static/images/textbook/ch3-fig9.png",
+    "keywords": [
+      "เครื่องพิมพ์",
+      "จุด",
+      "Dot",
+      "Matrix",
+      "Printer"
+    ]
+  },
+  {
+    "id": "ch3-fig10",
+    "chapter": 3,
+    "figure_no": 10,
+    "caption": "เครื่องพิมพ์แบบพ่นหมึก (Ink Jet Printer)",
+    "page": 61,
+    "file": "static/images/textbook/ch3-fig10.png",
+    "keywords": [
+      "เครื่องพิมพ์",
+      "พ่น",
+      "หมึก",
+      "Ink",
+      "Jet",
+      "Printer"
+    ]
+  },
+  {
+    "id": "ch3-fig11",
+    "chapter": 3,
+    "figure_no": 11,
+    "caption": "เครื่องพิมพ์แบบเลเซอร์ (Laser Printer)",
+    "page": 61,
+    "file": "static/images/textbook/ch3-fig11.png",
+    "keywords": [
+      "เครื่องพิมพ์",
+      "เลเซอร์",
+      "Laser",
+      "Printer"
+    ]
+  },
+  {
+    "id": "ch4-fig-algorithm",
+    "chapter": 4,
+    "figure_no": 0,
+    "caption": "โครงสร้างพื้นฐานที่ใช้ในการเขียนโปรแกรม",
+    "page": 64,
+    "file": "static/images/textbook/ch4-fig-algorithm.png",
+    "keywords": [
+      "โครงสร้างพื้นฐาน",
+      "การเขียน",
+      "โปรแกรม",
+      "Algorithm"
+    ]
+  },
+  {
+    "id": "ch4-fig1",
+    "chapter": 4,
+    "figure_no": 1,
+    "caption": "โครงสร้างข้อมูลทางตรรกะ",
+    "page": 67,
+    "file": "static/images/textbook/ch4-fig1.png",
+    "keywords": [
+      "โครงสร้าง",
+      "ข้อมูล",
+      "ตรรกะ"
+    ]
+  },
+  {
+    "id": "ch5-fig1",
+    "chapter": 5,
+    "figure_no": 1,
+    "caption": "องค์ประกอบของระบบเครือข่าย",
+    "page": 85,
+    "file": "static/images/textbook/ch5-fig1.png",
+    "keywords": [
+      "องค์ประกอบ",
+      "ระบบเครือข่าย"
+    ]
+  },
+  {
+    "id": "ch5-fig2",
+    "chapter": 5,
+    "figure_no": 2,
+    "caption": "ช่องทางการสื่อสารผ่านจานดาวเทียม",
+    "page": 86,
+    "file": "static/images/textbook/ch5-fig2.png",
+    "keywords": [
+      "ช่องทาง",
+      "การสื่อสาร",
+      "จานดาวเทียม"
+    ]
+  },
+  {
+    "id": "ch5-fig3",
+    "chapter": 5,
+    "figure_no": 3,
+    "caption": "การใช้อุปกรณ์ร่วมกันของระบบเครือข่าย",
+    "page": 87,
+    "file": "static/images/textbook/ch5-fig3.png",
+    "keywords": [
+      "อุปกรณ์",
+      "ระบบเครือข่าย"
+    ]
+  },
+  {
+    "id": "ch5-fig4",
+    "chapter": 5,
+    "figure_no": 4,
+    "caption": "OSI Reference Model",
+    "page": 92,
+    "file": "static/images/textbook/ch5-fig4.png",
+    "keywords": [
+      "OSI",
+      "Reference",
+      "Model"
+    ]
+  },
+  {
+    "id": "ch5-fig5",
+    "chapter": 5,
+    "figure_no": 5,
+    "caption": "เลเยอร์ต่างๆใน TCP/IP และ ISO/OSI Model",
+    "page": 95,
+    "file": "static/images/textbook/ch5-fig5.png",
+    "keywords": [
+      "เลเยอร์",
+      "TCP",
+      "IP",
+      "ISO",
+      "OSI",
+      "Model"
+    ]
+  },
+  {
+    "id": "ch5-fig6",
+    "chapter": 5,
+    "figure_no": 6,
+    "caption": "ระบบเครือข่ายแบบรวมศูนย์กลาง",
+    "page": 100,
+    "file": "static/images/textbook/ch5-fig6.png",
+    "keywords": [
+      "ระบบเครือข่าย",
+      "ศูนย์กลาง"
+    ]
+  },
+  {
+    "id": "ch5-fig7",
+    "chapter": 5,
+    "figure_no": 7,
+    "caption": "ระบบเครือข่ายแบบ Peer-to-Peer",
+    "page": 101,
+    "file": "static/images/textbook/ch5-fig7.png",
+    "keywords": [
+      "ระบบเครือข่าย",
+      "Peer-to-Peer"
+    ]
+  },
+  {
+    "id": "ch5-fig8",
+    "chapter": 5,
+    "figure_no": 8,
+    "caption": "ระบบเครือข่ายแบบ Client/Server",
+    "page": 102,
+    "file": "static/images/textbook/ch5-fig8.png",
+    "keywords": [
+      "ระบบเครือข่าย",
+      "Client",
+      "Server"
+    ]
+  },
+  {
+    "id": "ch6-fig-ecl-ic",
+    "chapter": 6,
+    "figure_no": 0,
+    "caption": "ไอซีตระกูลอีซีแอล",
+    "page": 138,
+    "file": "static/images/textbook/ch6-fig-ecl-ic.png",
+    "keywords": [
+      "ไอซี",
+      "ตระกูล",
+      "อีซีแอล",
+      "ECL"
+    ]
+  },
+  {
+    "id": "ch6-fig1",
+    "chapter": 6,
+    "figure_no": 1,
+    "caption": "สัญญาณแอนะล็อก และดิจิทัล",
+    "page": 114,
+    "file": "static/images/textbook/ch6-fig1.png",
+    "keywords": [
+      "สัญญาณ",
+      "แอนะล็อก",
+      "ดิจิทัล"
+    ]
+  },
+  {
+    "id": "ch6-fig2",
+    "chapter": 6,
+    "figure_no": 2,
+    "caption": "สัญญาณดิจิทัลในอุดมคติ",
+    "page": 115,
+    "file": "static/images/textbook/ch6-fig2.png",
+    "keywords": [
+      "สัญญาณ",
+      "ดิจิทัล",
+      "อุดมคติ"
+    ]
+  },
+  {
+    "id": "ch6-fig3",
+    "chapter": 6,
+    "figure_no": 3,
+    "caption": "ระดับแรงดันลอจิก",
+    "page": 116,
+    "file": "static/images/textbook/ch6-fig3.png",
+    "keywords": [
+      "ระดับ",
+      "แรงดัน",
+      "ลอจิก"
+    ]
+  },
+  {
+    "id": "ch6-fig4",
+    "chapter": 6,
+    "figure_no": 4,
+    "caption": "ช่วงเวลาแรงดันตกและแรงดันขึ้น",
+    "page": 117,
+    "file": "static/images/textbook/ch6-fig4.png",
+    "keywords": [
+      "ช่วงเวลา",
+      "แรงดัน",
+      "ตก"
+    ]
+  },
+  {
+    "id": "ch6-fig5",
+    "chapter": 6,
+    "figure_no": 5,
+    "caption": "สัญญาณนาฬิกา (Clock Signal)",
+    "page": 118,
+    "file": "static/images/textbook/ch6-fig5.png",
+    "keywords": [
+      "สัญญาณ",
+      "นาฬิกา",
+      "Clock",
+      "Signal"
+    ]
+  },
+  {
+    "id": "ch6-fig6",
+    "chapter": 6,
+    "figure_no": 6,
+    "caption": "วงจรสวิตซ์และรีเลย์",
+    "page": 120,
+    "file": "static/images/textbook/ch6-fig6.png",
+    "keywords": [
+      "วงจร",
+      "สวิตซ์",
+      "รีเลย์"
+    ]
+  },
+  {
+    "id": "ch6-fig7",
+    "chapter": 6,
+    "figure_no": 7,
+    "caption": "บัฟเฟอร์ (buffer)  (ก) แบบโครงสร้าง (ข) ตารางความจริง (ค) สัญลักษณ์",
+    "page": 120,
+    "file": "static/images/textbook/ch6-fig7.png",
+    "keywords": [
+      "บัฟเฟอร์",
+      "buffer",
+      "โครงสร้าง",
+      "ตาราง",
+      "ความจริง",
+      "สัญลักษณ์"
+    ]
+  },
+  {
+    "id": "ch6-fig8",
+    "chapter": 6,
+    "figure_no": 8,
+    "caption": "บัฟเฟอร์สามสถานะ (tri – state buffer)",
+    "page": 121,
+    "file": "static/images/textbook/ch6-fig8.png",
+    "keywords": [
+      "บัฟเฟอร์",
+      "สาม",
+      "สถานะ",
+      "tri",
+      "state",
+      "buffer"
+    ]
+  },
+  {
+    "id": "ch6-fig9",
+    "chapter": 6,
+    "figure_no": 9,
+    "caption": "อินเวอร์เตอร์ หรือ NOT เกต",
+    "page": 122,
+    "file": "static/images/textbook/ch6-fig9.png",
+    "keywords": [
+      "อินเวอร์เตอร์",
+      "NOT",
+      "เกต"
+    ]
+  },
+  {
+    "id": "ch6-fig10",
+    "chapter": 6,
+    "figure_no": 10,
+    "caption": "อินเวอร์เตอร์สามสถานะ (tri – state Inverter)",
+    "page": 123,
+    "file": "static/images/textbook/ch6-fig10.png",
+    "keywords": [
+      "อินเวอร์เตอร์",
+      "สาม",
+      "สถานะ",
+      "tri",
+      "state",
+      "Inverter"
+    ]
+  },
+  {
+    "id": "ch6-fig11",
+    "chapter": 6,
+    "figure_no": 11,
+    "caption": "แอนด์เกต 2 อินพุต (two input AND gate)",
+    "page": 123,
+    "file": "static/images/textbook/ch6-fig11.png",
+    "keywords": [
+      "แอนด์เกต",
+      "อินพุต",
+      "two",
+      "input",
+      "AND",
+      "gate"
+    ]
+  },
+  {
+    "id": "ch6-fig12",
+    "chapter": 6,
+    "figure_no": 12,
+    "caption": "กระบวนการพื้นฐานที่ใช้ในระบบดิจิทัล",
+    "page": 124,
+    "file": "static/images/textbook/ch6-fig12.png",
+    "keywords": [
+      "กระบวนการ",
+      "พื้นฐาน",
+      "ระบบ",
+      "ดิจิทัล"
+    ]
+  },
+  {
+    "id": "ch6-fig13",
+    "chapter": 6,
+    "figure_no": 13,
+    "caption": "ฟลิปฟลอป (flip – flop)",
+    "page": 125,
+    "file": "static/images/textbook/ch6-fig13.png",
+    "keywords": [
+      "ฟลิปฟลอป",
+      "flip",
+      "flop"
+    ]
+  },
+  {
+    "id": "ch6-fig14",
+    "chapter": 6,
+    "figure_no": 14,
+    "caption": "รีจีสเตอร์ 4 บิต",
+    "page": 126,
+    "file": "static/images/textbook/ch6-fig14.png",
+    "keywords": [
+      "รีจีสเตอร์",
+      "บิต"
+    ]
+  },
+  {
+    "id": "ch6-fig15",
+    "chapter": 6,
+    "figure_no": 15,
+    "caption": "โครงสร้างวงจรนับที่ประกอบด้วยฟลิปฟลอปจำนวน n ตัว",
+    "page": 127,
+    "file": "static/images/textbook/ch6-fig15.png",
+    "keywords": [
+      "โครงสร้าง",
+      "วงจร",
+      "ประกอบด้วย",
+      "ฟลิปฟลอป",
+      "จำนวน",
+      "ตัว"
+    ]
+  },
+  {
+    "id": "ch6-fig16",
+    "chapter": 6,
+    "figure_no": 16,
+    "caption": "วงจร ALU ใช้สำหรับการบวก",
+    "page": 127,
+    "file": "static/images/textbook/ch6-fig16.png",
+    "keywords": [
+      "วงจร",
+      "ALU",
+      "สำหรับ",
+      "การบวก"
+    ]
+  },
+  {
+    "id": "ch6-fig17",
+    "chapter": 6,
+    "figure_no": 17,
+    "caption": "บล็อกไดอะแกรมของวงจรเปรียบเทียบ",
+    "page": 129,
+    "file": "static/images/textbook/ch6-fig17.png",
+    "keywords": [
+      "บล็อกไดอะแกรม",
+      "วงจร",
+      "เปรียบเทียบ"
+    ]
+  },
+  {
+    "id": "ch6-fig18",
+    "chapter": 6,
+    "figure_no": 18,
+    "caption": "การเข้ารหัส",
+    "page": 130,
+    "file": "static/images/textbook/ch6-fig18.png",
+    "keywords": [
+      "การเข้ารหัส"
+    ]
+  },
+  {
+    "id": "ch6-fig19",
+    "chapter": 6,
+    "figure_no": 19,
+    "caption": "การถอดรหัส",
+    "page": 131,
+    "file": "static/images/textbook/ch6-fig19.png",
+    "keywords": [
+      "ถอดรหัส"
+    ]
+  },
+  {
+    "id": "ch6-fig20",
+    "chapter": 6,
+    "figure_no": 20,
+    "caption": "การทำงานของตัวเลือกข้อมูล",
+    "page": 132,
+    "file": "static/images/textbook/ch6-fig20.png",
+    "keywords": [
+      "การทำงาน",
+      "ตัวเลือก",
+      "ข้อมูล"
+    ]
+  },
+  {
+    "id": "ch6-fig21",
+    "chapter": 6,
+    "figure_no": 21,
+    "caption": "ส่วนประกอบพื้นฐานของคอมพิวเตอร์",
+    "page": 133,
+    "file": "static/images/textbook/ch6-fig21.png",
+    "keywords": [
+      "ส่วนประกอบ",
+      "พื้นฐาน",
+      "คอมพิวเตอร์"
+    ]
+  },
+  {
+    "id": "ch6-fig22-a",
+    "chapter": 6,
+    "figure_no": 22,
+    "caption": "การทำงานภายในของดิจิทัลคอมพิวเตอร์ (ก)",
+    "page": 134,
+    "file": "static/images/textbook/ch6-fig22-a.png",
+    "keywords": [
+      "การทำงาน",
+      "ดิจิทัล",
+      "คอมพิวเตอร์"
+    ]
+  },
+  {
+    "id": "ch6-fig22-b",
+    "chapter": 6,
+    "figure_no": 22,
+    "caption": "การทำงานภายในของดิจิทัลคอมพิวเตอร์ (ข)",
+    "page": 134,
+    "file": "static/images/textbook/ch6-fig22-b.png",
+    "keywords": [
+      "การทำงาน",
+      "ดิจิทัล",
+      "คอมพิวเตอร์"
+    ]
+  },
+  {
+    "id": "ch6-fig23",
+    "chapter": 6,
+    "figure_no": 23,
+    "caption": "ดิจิทัลคอมพิวเตอร์ใช้ไมโครโปรเซสเซอร์เป็นฐานในการทำงาน",
+    "page": 135,
+    "file": "static/images/textbook/ch6-fig23.png",
+    "keywords": [
+      "ดิจิทัล",
+      "คอมพิวเตอร์",
+      "ไมโคร",
+      "โปรเซสเซอร์",
+      "ฐาน",
+      "การทำงาน"
+    ]
+  },
+  {
+    "id": "ch6-fig24",
+    "chapter": 6,
+    "figure_no": 24,
+    "caption": "โครงสร้างของไอซีดิจิทัล",
+    "page": 136,
+    "file": "static/images/textbook/ch6-fig24.png",
+    "keywords": [
+      "โครงสร้าง",
+      "ไอซี",
+      "ดิจิทัล"
+    ]
+  },
+  {
+    "id": "ch6-fig25",
+    "chapter": 6,
+    "figure_no": 25,
+    "caption": "ตัวถัง หรือ Package ของไอซีบางแบบ",
+    "page": 137,
+    "file": "static/images/textbook/ch6-fig25.png",
+    "keywords": [
+      "ตัวถัง",
+      "Package",
+      "ไอซี"
+    ]
+  },
+  {
+    "id": "ch6-fig26",
+    "chapter": 6,
+    "figure_no": 26,
+    "caption": "ตัวอย่างไอซีดิจิทัลและสัญลักษณ์",
+    "page": 140,
+    "file": "static/images/textbook/ch6-fig26.png",
+    "keywords": [
+      "ตัวอย่าง",
+      "ไอซี",
+      "ดิจิทัล",
+      "สัญลักษณ์"
+    ]
+  },
+  {
+    "id": "ch6-fig26-cont",
+    "chapter": 6,
+    "figure_no": 26,
+    "caption": "ตัวอย่างไอซีดิจิทัลและสัญลักษณ์",
+    "page": 140,
+    "file": "static/images/textbook/ch6-fig26-cont.png",
+    "keywords": [
+      "ตัวอย่าง",
+      "ไอซี",
+      "ดิจิทัล",
+      "สัญลักษณ์"
+    ]
+  },
+  {
+    "id": "ch6-fig27",
+    "chapter": 6,
+    "figure_no": 27,
+    "caption": "ระดับลอจิกของ 74XX และ 74LSXX",
+    "page": 141,
+    "file": "static/images/textbook/ch6-fig27.png",
+    "keywords": [
+      "ระดับ",
+      "ลอจิก",
+      "74XX",
+      "74LSXX"
+    ]
+  },
+  {
+    "id": "ch6-fig28",
+    "chapter": 6,
+    "figure_no": 28,
+    "caption": "ระดับลอจิกของ 74HCXX",
+    "page": 142,
+    "file": "static/images/textbook/ch6-fig28.png",
+    "keywords": [
+      "ระดับ",
+      "ลอจิก",
+      "74HCXX"
+    ]
+  },
+  {
+    "id": "ch7-table1",
+    "chapter": 7,
+    "figure_no": 0,
+    "caption": "ตารางที่ ๗-๑ เปรียบเทียบเลขฐานสิบ เลขฐานสิบหก เลขฐานสองและรหัส BCD",
+    "page": 144,
+    "file": "static/images/textbook/ch7-table1.png",
+    "keywords": [
+      "ตาราง",
+      "เปรียบเทียบ",
+      "เลข",
+      "ฐาน",
+      "BCD",
+      "เลขฐานสิบ",
+      "หก",
+      "เลขฐานสอง"
+    ]
+  },
+  {
+    "id": "ch7-fig-gray-example",
+    "chapter": 7,
+    "figure_no": 0,
+    "caption": "ตัวอย่างการเปลี่ยนรหัสเกรย์ให้เป็นเลขฐานสอง",
+    "page": 148,
+    "file": "static/images/textbook/ch7-fig-gray-example.png",
+    "keywords": [
+      "รหัส",
+      "เกรย์",
+      "เลขฐานสอง"
+    ]
+  },
+  {
+    "id": "ch7-table2",
+    "chapter": 7,
+    "figure_no": 0,
+    "caption": "ตารางเปรียบเทียบรหัสเพิ่ม 3 กับรหัส BCD",
+    "page": 151,
+    "file": "static/images/textbook/ch7-table2.png",
+    "keywords": [
+      "รหัส",
+      "3",
+      "Excess-3",
+      "BCD"
+    ]
+  },
+  {
+    "id": "ch7-fig1",
+    "chapter": 7,
+    "figure_no": 1,
+    "caption": "การแปลงรหัสเกรย์ เป็นเลขฐานสอง",
+    "page": 149,
+    "file": "static/images/textbook/ch7-fig1.png",
+    "keywords": [
+      "แปลง",
+      "รหัส",
+      "เกรย์",
+      "เลขฐานสอง"
+    ]
+  },
+  {
+    "id": "ch7-fig2",
+    "chapter": 7,
+    "figure_no": 2,
+    "caption": "การแปลงเลขฐานสองให้เป็นรหัสเกรย์",
+    "page": 149,
+    "file": "static/images/textbook/ch7-fig2.png",
+    "keywords": [
+      "แปลง",
+      "เลขฐานสอง",
+      "รหัส",
+      "เกรย์"
+    ]
+  },
+  {
+    "id": "ch8-fig1",
+    "chapter": 8,
+    "figure_no": 1,
+    "caption": "คุณลักษณะสำคัญของ Big Data",
+    "page": 153,
+    "file": "static/images/textbook/ch8-fig1.png",
+    "keywords": [
+      "คุณลักษณะ",
+      "Big",
+      "Data"
+    ]
+  },
+  {
+    "id": "ch8-fig2",
+    "chapter": 8,
+    "figure_no": 2,
+    "caption": "ประเภทของข้อมูล Big Data",
+    "page": 154,
+    "file": "static/images/textbook/ch8-fig2.png",
+    "keywords": [
+      "ประเภท",
+      "ข้อมูล",
+      "Big",
+      "Data"
+    ]
+  },
+  {
+    "id": "ch8-fig3",
+    "chapter": 8,
+    "figure_no": 3,
+    "caption": "ความสัมพันธ์ของ Big Data, AI และ Machine Learning",
+    "page": 157,
+    "file": "static/images/textbook/ch8-fig3.png",
+    "keywords": [
+      "ความสัมพันธ์",
+      "Big",
+      "Data",
+      "AI",
+      "Machine",
+      "Learning"
+    ]
+  },
+  {
+    "id": "ch8-fig4",
+    "chapter": 8,
+    "figure_no": 4,
+    "caption": "ขั้นตอนการเรียนรู้ของ Machine learning",
+    "page": 158,
+    "file": "static/images/textbook/ch8-fig4.png",
+    "keywords": [
+      "ขั้นตอน",
+      "การเรียนรู้",
+      "Machine",
+      "learning"
+    ]
+  },
+  {
+    "id": "ch8-fig5",
+    "chapter": 8,
+    "figure_no": 5,
+    "caption": "ประเภทของ Machine Learning",
+    "page": 159,
+    "file": "static/images/textbook/ch8-fig5.png",
+    "keywords": [
+      "ประเภท",
+      "Machine",
+      "Learning"
+    ]
+  },
+  {
+    "id": "ch8-fig6",
+    "chapter": 8,
+    "figure_no": 6,
+    "caption": "สถาปัตยกรรม Big Data",
+    "page": 161,
+    "file": "static/images/textbook/ch8-fig6.png",
+    "keywords": [
+      "สถาปัตยกรรม",
+      "Big",
+      "Data"
+    ]
+  }
+]

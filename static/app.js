@@ -11,6 +11,10 @@ const sendButton = document.querySelector("#send-btn");
 const clearButton = document.querySelector("#clear-btn");
 const template = document.querySelector("#message-template");
 const themeToggleButton = document.querySelector("#theme-toggle");
+const imageLightbox = document.querySelector("#image-lightbox");
+const imageLightboxImg = imageLightbox.querySelector(".image-lightbox-img");
+const imageLightboxCaption = imageLightbox.querySelector(".image-lightbox-caption");
+const imageLightboxClose = imageLightbox.querySelector(".image-lightbox-close");
 
 function systemPrefersDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -78,6 +82,13 @@ function appendMessage(role, text, options = {}) {
     sources.remove();
   }
 
+  const imagesContainer = node.querySelector(".answer-images");
+  if (Array.isArray(options.images) && options.images.length > 0) {
+    imagesContainer.replaceChildren(...options.images.map(renderImageCard));
+  } else {
+    imagesContainer.remove();
+  }
+
   chatLog.appendChild(node);
   chatLog.scrollTop = chatLog.scrollHeight;
 
@@ -93,6 +104,7 @@ function showTypingIndicator() {
   const bubble = node.querySelector(".bubble");
   const meta = node.querySelector(".meta");
   const sources = node.querySelector(".sources");
+  const images = node.querySelector(".answer-images");
 
   node.classList.add("assistant", "typing-indicator");
   bubble.innerHTML = `
@@ -102,11 +114,44 @@ function showTypingIndicator() {
   `;
   meta.remove();
   sources.remove();
+  images.remove();
 
   chatLog.appendChild(node);
   chatLog.scrollTop = chatLog.scrollHeight;
   return node;
 }
+
+function renderImageCard(image) {
+  const card = document.createElement("figure");
+  card.className = "answer-image-card";
+  const src = `/${image.file}`.replace(/^\/+/, "/");
+  card.innerHTML = `
+    <img src="${escapeHtml(src)}" alt="${escapeHtml(image.caption || "")}" loading="lazy" />
+    <figcaption>${escapeHtml(image.caption || "")}</figcaption>
+  `;
+  card.querySelector("img").addEventListener("click", () => openImageLightbox(src, image.caption || ""));
+  return card;
+}
+
+function openImageLightbox(src, caption) {
+  imageLightboxImg.src = src;
+  imageLightboxImg.alt = caption;
+  imageLightboxCaption.textContent = caption;
+  imageLightbox.hidden = false;
+}
+
+function closeImageLightbox() {
+  imageLightbox.hidden = true;
+  imageLightboxImg.src = "";
+}
+
+imageLightboxClose.addEventListener("click", closeImageLightbox);
+imageLightbox.addEventListener("click", (event) => {
+  if (event.target === imageLightbox) closeImageLightbox();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !imageLightbox.hidden) closeImageLightbox();
+});
 
 function renderSourceCard(passage) {
   const card = document.createElement("section");
@@ -202,6 +247,7 @@ chatForm.addEventListener("submit", async (event) => {
     appendMessage("assistant", result.answer, {
       meta,
       passages: result.passages,
+      images: result.images,
     });
   } catch (error) {
     typingNode.remove();

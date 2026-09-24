@@ -23,7 +23,7 @@
         <div class="brand-card">
           <h1>ChatBot-Research</h1>
           <p class="lede">
-            RAG Chatbot สำหรับงานวิจัยการประกอบคอมพิวเตอร์ — ค้นหาจากชุดข้อมูลภาษาไทย 6 บท พร้อมอ้างอิงแหล่งที่มา
+            RAG Chatbot สำหรับงานวิจัยพื้นฐานคอมพิวเตอร์ — ค้นหาจากตำราภาษาไทย 8 บท พร้อมอ้างอิงแหล่งที่มา
           </p>
         </div>
 
@@ -33,7 +33,7 @@
         <section class="hero">
           <h2>ถามเรื่องการประกอบคอมพิวเตอร์</h2>
           <p>
-            ระบบค้นหาข้อมูลจากชุดข้อมูลวิจัยภาษาไทย 6 บท 626 คำถาม-คำตอบ แล้วตอบพร้อมอ้างอิงแหล่งที่มา
+            ระบบค้นหาข้อมูลจากตำราพื้นฐานคอมพิวเตอร์ภาษาไทย 8 บท แล้วตอบพร้อมอ้างอิงแหล่งที่มาและรูปประกอบ
           </p>
         </section>
 
@@ -67,6 +67,7 @@
     <template id="message-template">
       <article class="message">
         <div class="bubble"></div>
+        <div class="answer-images"></div>
         <div class="meta"></div>
         <details class="sources">
           <summary class="sources-summary"></summary>
@@ -74,6 +75,12 @@
         </details>
       </article>
     </template>
+
+    <div id="image-lightbox" class="image-lightbox" hidden>
+      <button type="button" class="image-lightbox-close" aria-label="ปิด">&times;</button>
+      <img class="image-lightbox-img" alt="" />
+      <p class="image-lightbox-caption"></p>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>

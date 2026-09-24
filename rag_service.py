@@ -162,6 +162,7 @@ class Passage:
     source: str
     text: str
     score: float
+    page_range: str = ""
 
 
 @dataclass
@@ -205,6 +206,38 @@ def _normalize_source(path: Path) -> str:
     return path.relative_to(DATA_DIR).as_posix()
 
 
+# Some PDF-to-Markdown extractions of legacy Thai fonts (e.g. THSarabunPSK)
+# encode certain vowels/tone marks as Private Use Area codepoints instead of
+# their standard Thai Unicode equivalents -- the PDF's own embedded
+# ToUnicode CMap maps those glyphs to PUA codepoints directly, so no
+# extraction step can recover the "correct" codepoint automatically. Mapping
+# verified by cross-referencing the PDF's ToUnicode CMap against known words
+# (e.g. "หน่วย", "เปิด", "คอมพิวเตอร์") throughout the textbook dataset.
+_THAI_PUA_FIX = {
+    "": "ิ",  # sara i      (เปิด, ฟิลด์)
+    "": "ี",  # sara ii     (ปี)
+    "": "ึ",  # sara ue     (ฝึก)
+    "": "ื",  # sara uee    (ฟันเฟือง, ปืนใหญ่)
+    "": "่",  # mai ek      (ปุ่ม, ฝ่าย)
+    "": "้",  # mai tho     (ไฟฟ้า)
+    "": "์",  # thanthakhat (ไดรฟ์)
+    "": "่",  # mai ek      (หน่วย, ส่วน)
+    "": "้",  # mai tho     (หน้า, ข้อมูล)
+    "": "๊",  # mai tri     (โต๊ะ, สล๊อต)
+    "": "์",  # thanthakhat (คอมพิวเตอร์, อุปกรณ์)
+    "": "ั",  # mai han-akat(สถาปัตยกรรม, ปัจจุบัน)
+    "": "็",  # mai taikhu  (เป็น)
+    "": "่",  # mai ek      (ฝั่ง)
+    "": "้",  # mai tho     (ฟลอปปี้ดิสก์)
+    "": "ฬ",  # ro rua -> lo (นาฬิกา)
+}
+_THAI_PUA_PATTERN = re.compile("|".join(re.escape(k) for k in _THAI_PUA_FIX))
+
+
+def fix_thai_pua_marks(text: str) -> str:
+    return _THAI_PUA_PATTERN.sub(lambda m: _THAI_PUA_FIX[m.group(0)], text)
+
+
 def _read_pdf(path: Path) -> str:
     try:
         reader = PdfReader(str(path))
@@ -225,7 +258,7 @@ def _read_json(path: Path) -> str:
 def _read_text(path: Path) -> str:
     try:
         with path.open("r", encoding="utf-8", errors="ignore") as handle:
-            return handle.read()
+            return fix_thai_pua_marks(handle.read())
     except Exception as exc:  # noqa: BLE001
         return f"[Could not read file: {exc}]"
 
@@ -273,6 +306,187 @@ def chunk_text(text: str, source: str, size: int = 1200, overlap: int = 200) -> 
         if start + size >= len(text):
             break
     return chunks
+
+
+_PDF_PAGE_PRESERVATION_MARKER = 'dataset_type: "pdf-page-preservation"'
+_PDF_PAGE_HEADING = re.compile(r"^### หน้า PDF (\d+)\s*$", re.MULTILINE)
+_PDF_PAGE_TEXT_BLOCK = re.compile(r"```text\n(.*?)\n```", re.DOTALL)
+
+
+def is_pdf_page_preservation_dataset(text: str) -> bool:
+    """Detect the "PDF page preservation" markdown export format (one
+    ### หน้า PDF NNN section per page, page metadata table, then the raw
+    PDF text layer in a ```text block) via its frontmatter marker, so this
+    dataset can be chunked by page instead of by a fixed character count."""
+    return _PDF_PAGE_PRESERVATION_MARKER in text[:500]
+
+
+def extract_pdf_pages(text: str) -> list[tuple[int, str]]:
+    """Split a page-preservation markdown export into (page_number, page_text)
+    pairs, keeping only each page's raw PDF text layer -- not the surrounding
+    metadata (page size, detected headings, image coordinate tables), which
+    would otherwise pollute what the retrieval index searches over."""
+    headings = list(_PDF_PAGE_HEADING.finditer(text))
+    pages: list[tuple[int, str]] = []
+    for index, heading in enumerate(headings):
+        page_number = int(heading.group(1))
+        section_start = heading.end()
+        section_end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
+        section = text[section_start:section_end]
+        text_match = _PDF_PAGE_TEXT_BLOCK.search(section)
+        if not text_match:
+            continue
+        page_text = " ".join(text_match.group(1).split())
+        if page_text:
+            pages.append((page_number, page_text))
+    return pages
+
+
+def chunk_pdf_pages(
+    text: str,
+    source: str,
+    *,
+    min_chars: int = 600,
+    max_pages: int = 3,
+) -> list[dict[str, str]]:
+    """Chunk a page-preservation dataset by page instead of by a fixed
+    character offset, so each chunk stays aligned with real page boundaries
+    (needed to later match retrieved passages back to source page images).
+    Short pages are merged with the next page (up to max_pages) so a chunk
+    still has enough content to be useful for retrieval; a single very long
+    page is kept as its own chunk rather than being split mid-page."""
+    pages = extract_pdf_pages(text)
+    chunks: list[dict[str, str]] = []
+    buffer_pages: list[int] = []
+    buffer_text: list[str] = []
+
+    def flush() -> None:
+        if not buffer_pages:
+            return
+        combined = " ".join(buffer_text).strip()
+        if combined:
+            page_range = (
+                str(buffer_pages[0])
+                if len(buffer_pages) == 1
+                else f"{buffer_pages[0]}-{buffer_pages[-1]}"
+            )
+            chunks.append({"source": source, "text": combined, "page_range": page_range})
+
+    for page_number, page_text in pages:
+        buffer_pages.append(page_number)
+        buffer_text.append(page_text)
+        buffer_chars = sum(len(t) for t in buffer_text)
+        if buffer_chars >= min_chars or len(buffer_pages) >= max_pages:
+            flush()
+            buffer_pages = []
+            buffer_text = []
+
+    flush()
+    return chunks
+
+
+IMAGE_MAP_PATH = APP_DIR / "image_map.json"
+MAX_IMAGES_PER_ANSWER = 2
+
+
+@dataclass
+class ImageEntry:
+    id: str
+    chapter: int
+    caption: str
+    page: int
+    file: str
+    keywords: list[str]
+
+
+def load_image_map(path: Path = IMAGE_MAP_PATH) -> list[ImageEntry]:
+    """Load the curated figure/table manifest built by scripts/build_image_map.py.
+    Missing or malformed files degrade to no images instead of breaking chat."""
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            raw = json.load(handle)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not load image map at %s: %s", path, exc)
+        return []
+
+    entries: list[ImageEntry] = []
+    for item in raw:
+        try:
+            entries.append(
+                ImageEntry(
+                    id=str(item["id"]),
+                    chapter=int(item.get("chapter", 0)),
+                    caption=str(item.get("caption", "")),
+                    page=int(item["page"]),
+                    file=str(item["file"]),
+                    keywords=[str(k) for k in item.get("keywords", [])],
+                )
+            )
+        except (KeyError, ValueError, TypeError):
+            continue
+    return entries
+
+
+def _parse_page_range(page_range: str) -> tuple[int, int] | None:
+    if not page_range:
+        return None
+    parts = page_range.split("-")
+    try:
+        if len(parts) == 1:
+            page = int(parts[0])
+            return page, page
+        return int(parts[0]), int(parts[1])
+    except ValueError:
+        return None
+
+
+def match_images_for_passages(
+    passages: list[Passage],
+    question: str,
+    image_entries: list[ImageEntry],
+    *,
+    max_images: int = MAX_IMAGES_PER_ANSWER,
+) -> list[dict[str, Any]]:
+    """Pick images to attach to a grounded answer. An image is only eligible
+    when both hold: its source page falls inside the page range of one of the
+    answer's grounding passages, AND at least one of its keywords appears in
+    the question. Among eligible images, more keyword hits rank first."""
+    if not image_entries:
+        return []
+
+    candidate_pages: set[int] = set()
+    for passage in passages:
+        bounds = _parse_page_range(passage.page_range)
+        if bounds is None:
+            continue
+        start, end = bounds
+        candidate_pages.update(range(start, end + 1))
+
+    if not candidate_pages:
+        return []
+
+    lowered_question = question.strip().lower()
+
+    def keyword_hits(entry: ImageEntry) -> int:
+        return sum(1 for kw in entry.keywords if kw and kw.lower() in lowered_question)
+
+    matched = [
+        entry
+        for entry in image_entries
+        if entry.page in candidate_pages and keyword_hits(entry) > 0
+    ]
+    matched.sort(key=lambda entry: (-keyword_hits(entry), entry.page, entry.id))
+
+    selected = matched[:max_images]
+    return [
+        {
+            "id": entry.id,
+            "caption": entry.caption,
+            "page": entry.page,
+            "file": entry.file,
+        }
+        for entry in selected
+    ]
 
 
 _QA_PATTERN = re.compile(
@@ -342,7 +556,10 @@ def build_index(signature: tuple[Any, ...], settings: Settings | None = None) ->
     files: list[IndexedFile] = []
     qa_pairs: list[QAPair] = []
     for document in documents:
-        doc_chunks = chunk_text(document.text, document.source)
+        if is_pdf_page_preservation_dataset(document.text):
+            doc_chunks = chunk_pdf_pages(document.text, document.source)
+        else:
+            doc_chunks = chunk_text(document.text, document.source)
         chunks.extend(doc_chunks)
         qa_pairs.extend(parse_qa_pairs(document.text, document.source))
         files.append(
@@ -478,11 +695,69 @@ def build_conversation_prompt(question: str, history: list[dict[str, str]] | Non
     )
 
 
+# Domain synonym pairs for this textbook's terminology. TF-IDF only matches
+# shared surface words, so a question phrased with the English term, an
+# abbreviation, or a colloquial Thai term misses passages that only use the
+# textbook's own wording (and vice versa). Each group is expanded to every
+# other term in the same group when building the retrieval query, without
+# needing an external API call.
+SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
+    ("cpu", "หน่วยประมวลผลกลาง", "ซีพียู", "หน่วยประมวลผล"),
+    ("ram", "แรม", "หน่วยความจำหลัก", "หน่วยความจำชั่วคราว"),
+    ("rom", "รอม"),
+    ("gpu", "การ์ดจอ", "หน่วยประมวลผลกราฟิก"),
+    ("flowchart", "ผังงาน", "โฟลว์ชาร์ต"),
+    ("mouse", "เมาส์"),
+    ("monitor", "จอภาพ", "จอแสดงผล"),
+    ("keyboard", "คีย์บอร์ด", "แป้นพิมพ์"),
+    ("printer", "เครื่องพิมพ์", "ปริ๊นเตอร์"),
+    ("big data", "บิ๊กดาต้า", "ข้อมูลขนาดใหญ่"),
+    ("flash drive", "แฟลชไดรฟ์", "แฟลชไดร์ฟ"),
+    ("hard disk", "harddisk", "ฮาร์ดดิสก์", "จานบันทึกข้อมูล"),
+    ("input device", "อุปกรณ์นำเข้าข้อมูล", "อุปกรณ์อินพุต"),
+    ("output device", "อุปกรณ์แสดงผล", "อุปกรณ์เอาต์พุต"),
+    ("binary code", "รหัสฐานสอง", "เลขฐานสอง"),
+    ("gray code", "รหัสเกรย์"),
+    ("ascii code", "รหัสแอสกี้", "แอสกี้"),
+    ("parity bit", "พาริตี้บิต", "บิตพาริตี"),
+    ("logic gate", "เกตลอจิก", "ลอจิกเกต"),
+    ("digital logic", "ดิจิทัลลอจิก"),
+    ("information technology", "เทคโนโลยีสารสนเทศ"),
+    ("data communication", "การสื่อสารข้อมูล"),
+)
+
+_SYNONYM_LOOKUP: dict[str, tuple[str, ...]] = {}
+for _group in SYNONYM_GROUPS:
+    for _term in _group:
+        _SYNONYM_LOOKUP[_term.lower()] = _group
+
+
+def expand_query_with_synonyms(query: str) -> str:
+    """Append any synonym-group terms whose keyword appears in the query, so
+    TF-IDF has surface-level overlap with passages that use different wording
+    for the same concept. Longer terms are checked first so e.g. "hard disk"
+    matches before a shorter unrelated substring could."""
+    lowered = query.lower()
+    additions: list[str] = []
+    seen_groups: set[tuple[str, ...]] = set()
+    for term in sorted(_SYNONYM_LOOKUP, key=len, reverse=True):
+        if term in lowered:
+            group = _SYNONYM_LOOKUP[term]
+            if group in seen_groups:
+                continue
+            seen_groups.add(group)
+            additions.extend(t for t in group if t.lower() != term)
+    if not additions:
+        return query
+    return f"{query} {' '.join(additions)}"
+
+
 class KnowledgeBase:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
         self._lock = threading.Lock()
         self._index = build_index(data_signature(), self.settings)
+        self.image_entries = load_image_map()
 
     def refresh(self, force: bool = False) -> RetrievalIndex:
         signature = data_signature()
@@ -517,8 +792,9 @@ class KnowledgeBase:
             return []
 
         effective_top_k = max(1, top_k or self.settings.top_k)
-        word_query = index.word_vectorizer.transform([query])
-        char_query = index.char_vectorizer.transform([query])
+        expanded_query = expand_query_with_synonyms(query)
+        word_query = index.word_vectorizer.transform([expanded_query])
+        char_query = index.char_vectorizer.transform([expanded_query])
         query_vector = hstack([word_query, char_query])
         keyword_scores = cosine_similarity(query_vector, index.matrix)[0]
 
@@ -550,6 +826,7 @@ class KnowledgeBase:
                     source=chunk["source"],
                     text=chunk["text"],
                     score=score,
+                    page_range=chunk.get("page_range", ""),
                 )
             )
         return passages
@@ -719,6 +996,7 @@ def answer_question(
         return {
             "answer": local_conversation_fallback(question, kb_files),
             "passages": [],
+            "images": [],
             "elapsed": round(time.time() - started_at, 3),
             "mode": "assistant_fallback",
             "provider_used": "local",
@@ -731,6 +1009,7 @@ def answer_question(
             "passages": [
                 {"source": exact_match.source, "text": exact_match.answer, "score": 1.0}
             ],
+            "images": [],
             "elapsed": round(time.time() - started_at, 3),
             "mode": "exact_match",
             "provider_used": "dataset",
@@ -771,6 +1050,7 @@ def answer_question(
                         {"source": passage.source, "text": passage.text, "score": passage.score}
                         for passage in passages
                     ],
+                    "images": [],
                     "elapsed": round(time.time() - started_at, 3),
                     "mode": "needs_provider",
                     "provider_used": "none",
@@ -781,6 +1061,7 @@ def answer_question(
                     {"source": passage.source, "text": passage.text, "score": passage.score}
                     for passage in passages
                 ],
+                "images": [],
                 "elapsed": round(time.time() - started_at, 3),
                 "mode": "provider_error",
                 "provider_used": "none",
@@ -793,12 +1074,14 @@ def answer_question(
         # general computer knowledge instead of surfacing that refusal, same
         # as the "no passages retrieved" case below.
         if "ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร" not in answer:
+            images = match_images_for_passages(passages, question, kb.image_entries)
             return {
                 "answer": answer,
                 "passages": [
                     {"source": passage.source, "text": passage.text, "score": passage.score}
                     for passage in passages
                 ],
+                "images": images,
                 "elapsed": round(time.time() - started_at, 3),
                 "mode": "grounded",
                 "provider_used": provider_name,
@@ -836,6 +1119,7 @@ def answer_question(
         return {
             "answer": "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร กรุณาถามเกี่ยวกับการประกอบคอมพิวเตอร์ครับ",
             "passages": [],
+            "images": [],
             "elapsed": round(time.time() - started_at, 3),
             "mode": "no_documents",
             "provider_used": "none",
@@ -844,6 +1128,7 @@ def answer_question(
     return {
         "answer": answer,
         "passages": [],
+        "images": [],
         "elapsed": round(time.time() - started_at, 3),
         "mode": "conversation",
         "provider_used": provider_name,

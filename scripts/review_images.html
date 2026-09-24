@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ตรวจสอบรูปภาพ - ตำราคอมพิวเตอร์และดิจิทัล 2567</title>
+<style>
+  body { font-family: "Tahoma", sans-serif; background: #1a1a1a; color: #eee; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; }
+  .meta { color: #999; margin-bottom: 24px; }
+  .chapter { margin-top: 32px; border-top: 1px solid #444; padding-top: 12px; }
+  .chapter h2 { color: #7dd3fc; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: #262626; border-radius: 8px; padding: 12px; }
+  .card img { width: 100%; max-height: 220px; object-fit: contain; background: #fff; border-radius: 4px; }
+  .card .id { font-family: monospace; color: #facc15; font-size: 12px; }
+  .card .caption { margin: 6px 0; font-size: 14px; }
+  .card .page { color: #888; font-size: 12px; }
+  .card .keywords { font-size: 11px; color: #6ee7b7; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>ตรวจสอบรูปภาพที่คัดมาจากตำรา (ระยะ 1)</h1>
+<div class="meta" id="meta"></div>
+<div id="root"></div>
+<script>
+fetch("../image_map.json").then(r => r.json()).then(data => {
+  document.getElementById("meta").textContent = `ทั้งหมด ${data.length} รูป`;
+  const byChapter = {};
+  data.forEach(item => {
+    (byChapter[item.chapter] ||= []).push(item);
+  });
+  const root = document.getElementById("root");
+  Object.keys(byChapter).sort((a,b) => a-b).forEach(ch => {
+    const section = document.createElement("div");
+    section.className = "chapter";
+    section.innerHTML = `<h2>บทที่ ${ch} (${byChapter[ch].length} รูป)</h2>`;
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    byChapter[ch].forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="../${item.file}" loading="lazy">
+        <div class="id">${item.id}</div>
+        <div class="caption">${item.caption}</div>
+        <div class="page">หน้า ${item.page}</div>
+        <div class="keywords">${item.keywords.join(", ")}</div>
+      `;
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    root.appendChild(section);
+  });
+});
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # ChatBot-Research
 
-ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับการประกอบคอมพิวเตอร์ โดยใช้ชุดข้อมูลภาษาไทย (6 บท 626 คู่คำถาม-คำตอบ) เป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
+ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับพื้นฐานคอมพิวเตอร์ โดยใช้ตำราภาษาไทย (8 บท) เป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
 
 ## Features
 
@@ -71,7 +71,7 @@ http://localhost:5001
 | `GEMINI_MODEL` | `gemini-3.5-flash` | model id ของ Gemini |
 | `TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | endpoint (OpenAI-compatible) |
 | `TOP_K` | `5` | จำนวน chunks สูงสุดที่ดึงมา |
-| `MIN_RELEVANCE` | `0.05` | คะแนนรวม (hybrid) ขั้นต่ำ |
+| `MIN_RELEVANCE` | `0.10` | คะแนนรวม (hybrid) ขั้นต่ำ |
 | `EMBEDDING_MODEL` | `gemini-embedding-001` | model id สำหรับ semantic embedding |
 | `SEMANTIC_WEIGHT` | `0.6` | น้ำหนักของ semantic score เทียบกับ TF-IDF (0 = keyword-only, 1 = semantic-only) |
 

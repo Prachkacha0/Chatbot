@@ -141,6 +141,7 @@ def chat(request: Request, payload: ChatRequest) -> dict:
         return {
             "answer": "ขออภัยครับ ระบบมีปัญหาชั่วคราว ลองส่งคำถามใหม่ได้เลย",
             "passages": [],
+            "images": [],
             "elapsed": 0.0,
             "mode": "server_error",
             "provider_used": "local",
