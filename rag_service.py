@@ -7,6 +7,7 @@ import os
 import re
 import threading
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -34,28 +35,35 @@ NO_ANSWER = (
 )
 
 GROUNDING_SYSTEM_PROMPT = """You are ChatBot-Research, a research assistant that answers questions
-about computer assembly strictly from the provided document context.
+about basic computer knowledge strictly from a Thai computer textbook, using
+only the provided document context.
 
 Rules:
 1. Answer ONLY using information from the DOCUMENT CONTEXT provided. Do not
    use outside knowledge, general knowledge, or make assumptions beyond what
    the documents say.
-2. If the document context contains the answer, use it directly and cite the
-   source filename.
-3. If the document context does not contain enough information to answer the
+2. Stay as close to the textbook's own wording as possible: reuse its
+   sentences and terms instead of rephrasing them, and keep numbers, dates,
+   names and technical terms exactly as written in the context (for example
+   keep "John Napier" in English and keep Thai numerals such as ๒๑๕๘ as-is;
+   do not transliterate or convert them).
+3. Cite where each point comes from using the label after "|" in that
+   source's header, in parentheses, e.g. (ตำราหน้า 13). Never cite as
+   "Source 1" or by filename.
+4. If the document context does not contain enough information to answer the
    question, respond with: "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร
-   กรุณาถามเกี่ยวกับการประกอบคอมพิวเตอร์ครับ"
-4. Never guess, infer, or add information not found in the documents.
-5. Use recent conversation to understand the user's intent.
-6. Keep your tone natural and clear.
-7. Answer in the same language as the user.
-8. Default to a short, direct answer: a few sentences or a short list (roughly
+   กรุณาถามเกี่ยวกับเนื้อหาในตำราพื้นฐานคอมพิวเตอร์ครับ"
+5. Never guess, infer, or add information not found in the documents.
+6. Use recent conversation to understand the user's intent.
+7. Keep your tone natural and clear.
+8. Answer in the same language as the user.
+9. Default to a short, direct answer: a few sentences or a short list (roughly
    3-5 bullet points) covering only what the question actually asked for.
    Only give a long detailed answer when the user explicitly asks for it.
 """
 
 GENERAL_COMPUTER_SYSTEM_PROMPT = """You are ChatBot-Research, a research assistant for a
-computer-assembly research project. The document knowledge base did NOT contain
+basic-computer textbook research project. The document knowledge base did NOT contain
 an answer to this question, so you are answering from your own general knowledge
 instead — but ONLY because the question is about computers, hardware, or
 information technology.
@@ -158,12 +166,28 @@ class Settings:
     default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
 
 
+_ARABIC_TO_THAI_DIGITS = str.maketrans("0123456789", "๐๑๒๓๔๕๖๗๘๙")
+
+
 @dataclass
 class Passage:
     source: str
     text: str
     score: float
     page_range: str = ""
+    page_label: str = ""
+
+    @property
+    def citation(self) -> str:
+        if self.page_label:
+            # Thai numerals, as printed on the textbook's pages.
+            return f"ตำราหน้า {self.page_label.translate(_ARABIC_TO_THAI_DIGITS)}"
+        if self.page_range:
+            return "ตำราส่วนต้นเล่ม"
+        return self.source
+
+    def to_payload(self) -> dict[str, Any]:
+        return {"source": self.source, "page": self.citation, "text": self.text, "score": self.score}
 
 
 @dataclass
@@ -343,6 +367,26 @@ def extract_pdf_pages(text: str) -> list[tuple[int, str]]:
     return pages
 
 
+_THAI_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
+_LEADING_PAGE_NUMBER = re.compile(r"([๐-๙0-9]+)\s")
+
+
+def _printed_page_offset(pages: list[tuple[int, str]]) -> int | None:
+    """Most common gap between a page's PDF index and the page number printed
+    at the top of it. Pages that don't open with a number (chapter title
+    pages, front matter) still follow the same offset."""
+    offsets: Counter[int] = Counter()
+    for page_number, page_text in pages:
+        match = _LEADING_PAGE_NUMBER.match(page_text)
+        if match:
+            offsets[page_number - int(match.group(1).translate(_THAI_DIGITS))] += 1
+    return offsets.most_common(1)[0][0] if offsets else None
+
+
+def _format_range(numbers: list[int]) -> str:
+    return str(numbers[0]) if numbers[0] == numbers[-1] else f"{numbers[0]}-{numbers[-1]}"
+
+
 def chunk_pdf_pages(
     text: str,
     source: str,
@@ -357,6 +401,7 @@ def chunk_pdf_pages(
     still has enough content to be useful for retrieval; a single very long
     page is kept as its own chunk rather than being split mid-page."""
     pages = extract_pdf_pages(text)
+    offset = _printed_page_offset(pages)
     chunks: list[dict[str, str]] = []
     buffer_pages: list[int] = []
     buffer_text: list[str] = []
@@ -366,14 +411,27 @@ def chunk_pdf_pages(
             return
         combined = " ".join(buffer_text).strip()
         if combined:
-            page_range = (
-                str(buffer_pages[0])
-                if len(buffer_pages) == 1
-                else f"{buffer_pages[0]}-{buffer_pages[-1]}"
-            )
-            chunks.append({"source": source, "text": combined, "page_range": page_range})
+            printed = [p - offset for p in buffer_pages if offset is not None and p - offset >= 1]
+            chunks.append({
+                "source": source,
+                "text": combined,
+                # PDF page index -- what image_map.json pages refer to.
+                "page_range": _format_range(buffer_pages),
+                # Number printed on the page itself, used for citations; empty
+                # for front matter (cover, contents), which has no page number.
+                "page_label": _format_range(printed) if printed else "",
+            })
+
+    def is_front_matter(page_number: int) -> bool:
+        return offset is None or page_number - offset < 1
 
     for page_number, page_text in pages:
+        # Don't merge front matter (contents, glossary) into the first body
+        # page -- the chunk would be cited as page 1 but open with glossary text.
+        if buffer_pages and is_front_matter(buffer_pages[-1]) != is_front_matter(page_number):
+            flush()
+            buffer_pages = []
+            buffer_text = []
         buffer_pages.append(page_number)
         buffer_text.append(page_text)
         buffer_chars = sum(len(t) for t in buffer_text)
@@ -687,7 +745,7 @@ def history_as_text(history: list[dict[str, str]] | None) -> str:
 def build_context(passages: list[Passage]) -> str:
     blocks = []
     for index, passage in enumerate(passages, start=1):
-        blocks.append(f"[Source {index}: {passage.source}]\n{passage.text}")
+        blocks.append(f"[แหล่งที่ {index} | {passage.citation}]\n{passage.text}")
     return "\n\n---\n\n".join(blocks)
 
 
@@ -876,6 +934,7 @@ class KnowledgeBase:
                     text=chunk["text"],
                     score=score,
                     page_range=chunk.get("page_range", ""),
+                    page_label=chunk.get("page_label", ""),
                 )
             )
         return passages
@@ -1095,10 +1154,7 @@ def answer_question(
             if not available_provider_candidates(grounded_choice, typhoon_api_key, gemini_api_key):
                 return {
                     "answer": "ผมพบข้อมูลที่น่าจะตอบได้จากเอกสารแล้ว แต่ตอนนี้ยังไม่มี API key สำหรับให้โมเดลสรุปคำตอบครับ",
-                    "passages": [
-                        {"source": passage.source, "text": passage.text, "score": passage.score}
-                        for passage in passages
-                    ],
+                    "passages": [passage.to_payload() for passage in passages],
                     "images": [],
                     "elapsed": round(time.time() - started_at, 3),
                     "mode": "needs_provider",
@@ -1106,10 +1162,7 @@ def answer_question(
                 }
             return {
                 "answer": "ผมพบข้อมูลที่เกี่ยวข้องในเอกสารแล้ว แต่เชื่อมต่อโมเดลไม่สำเร็จในรอบนี้ครับ ลองใหม่อีกครั้งได้เลย",
-                "passages": [
-                    {"source": passage.source, "text": passage.text, "score": passage.score}
-                    for passage in passages
-                ],
+                "passages": [passage.to_payload() for passage in passages],
                 "images": [],
                 "elapsed": round(time.time() - started_at, 3),
                 "mode": "provider_error",
@@ -1128,10 +1181,7 @@ def answer_question(
             )
             return {
                 "answer": answer,
-                "passages": [
-                    {"source": passage.source, "text": passage.text, "score": passage.score}
-                    for passage in passages
-                ],
+                "passages": [passage.to_payload() for passage in passages],
                 "images": images,
                 "elapsed": round(time.time() - started_at, 3),
                 "mode": "grounded",
@@ -1168,7 +1218,7 @@ def answer_question(
 
     if not answer:
         return {
-            "answer": "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร กรุณาถามเกี่ยวกับการประกอบคอมพิวเตอร์ครับ",
+            "answer": "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร กรุณาถามเกี่ยวกับเนื้อหาในตำราพื้นฐานคอมพิวเตอร์ครับ",
             "passages": [],
             "images": [],
             "elapsed": round(time.time() - started_at, 3),

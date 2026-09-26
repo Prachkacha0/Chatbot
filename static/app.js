@@ -159,7 +159,7 @@ function renderSourceCard(passage) {
   const score = `${Math.round((passage.score || 0) * 100)}%`;
   card.innerHTML = `
     <header>
-      <strong>${escapeHtml(passage.source)}</strong>
+      <strong>${escapeHtml(passage.page || passage.source)}</strong>
       <span class="source-score">match ${score}</span>
     </header>
     <p>${escapeHtml(trimSnippet(passage.text))}</p>
@@ -270,7 +270,7 @@ clearButton.addEventListener("click", () => {
   chatLog.replaceChildren();
   appendMessage(
     "assistant",
-    "สวัสดีครับ ถามเรื่องการประกอบคอมพิวเตอร์ได้เลย ระบบจะค้นหาจากเอกสารวิจัยและอ้างอิงแหล่งที่มาให้",
+    "สวัสดีครับ ถามเรื่องพื้นฐานคอมพิวเตอร์ได้เลย ระบบจะค้นหาจากตำราและอ้างอิงเลขหน้าให้",
     { persist: false },
   );
 });
