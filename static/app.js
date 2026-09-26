@@ -1,4 +1,7 @@
-const THEME_STORAGE_KEY = "chatbot-research-theme";
+const THEME_STORAGE_KEY = "polaris-theme";
+const SIDEBAR_STORAGE_KEY = "polaris-sidebar-collapsed";
+const WELCOME_MESSAGE =
+  "สวัสดีครับ ผมคือ **Polaris** ถามเรื่องพื้นฐานคอมพิวเตอร์ได้เลย ผมจะค้นหาจากตำราภาษาไทย 8 บท แล้วตอบพร้อมอ้างอิงเลขหน้าและรูปประกอบ\n\nเลือกบทจากแถบข้างเพื่อดูคำถามตัวอย่างได้ครับ";
 
 const state = {
   messages: [],
@@ -15,6 +18,12 @@ const imageLightbox = document.querySelector("#image-lightbox");
 const imageLightboxImg = imageLightbox.querySelector(".image-lightbox-img");
 const imageLightboxCaption = imageLightbox.querySelector(".image-lightbox-caption");
 const imageLightboxClose = imageLightbox.querySelector(".image-lightbox-close");
+const app = document.querySelector(".app");
+const sidebarToggleButton = document.querySelector("#sidebar-toggle");
+const sidebarBackdrop = document.querySelector("#sidebar-backdrop");
+const chatMenuButton = document.querySelector("#chat-menu-btn");
+const chatMenu = document.querySelector("#chat-menu");
+const mobileQuery = window.matchMedia("(max-width: 1024px)");
 
 function systemPrefersDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -44,6 +53,80 @@ themeToggleButton.addEventListener("click", () => {
 });
 
 initTheme();
+
+function isSidebarVisible() {
+  return mobileQuery.matches
+    ? app.classList.contains("sidebar-open")
+    : !app.classList.contains("sidebar-collapsed");
+}
+
+function syncSidebarState() {
+  sidebarBackdrop.hidden = !(mobileQuery.matches && app.classList.contains("sidebar-open"));
+  sidebarToggleButton.setAttribute("aria-expanded", String(isSidebarVisible()));
+}
+
+function closeMobileSidebar() {
+  app.classList.remove("sidebar-open");
+  syncSidebarState();
+}
+
+sidebarToggleButton.addEventListener("click", () => {
+  if (mobileQuery.matches) {
+    app.classList.toggle("sidebar-open");
+  } else {
+    const collapsed = app.classList.toggle("sidebar-collapsed");
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "1" : "0");
+  }
+  syncSidebarState();
+});
+
+sidebarBackdrop.addEventListener("click", closeMobileSidebar);
+mobileQuery.addEventListener("change", () => {
+  app.classList.remove("sidebar-open");
+  syncSidebarState();
+});
+
+app.classList.toggle("sidebar-collapsed", localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1");
+syncSidebarState();
+
+function setChatMenuOpen(open) {
+  chatMenu.hidden = !open;
+  chatMenuButton.setAttribute("aria-expanded", String(open));
+}
+
+chatMenuButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setChatMenuOpen(chatMenu.hidden);
+});
+
+document.addEventListener("click", (event) => {
+  if (!chatMenu.hidden && !chatMenu.contains(event.target)) setChatMenuOpen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!chatMenu.hidden) {
+    setChatMenuOpen(false);
+    chatMenuButton.focus();
+  }
+  if (app.classList.contains("sidebar-open")) closeMobileSidebar();
+});
+
+function autoGrowInput() {
+  messageInput.style.height = "auto";
+  messageInput.style.height = `${messageInput.scrollHeight}px`;
+}
+
+messageInput.addEventListener("input", autoGrowInput);
+
+document.querySelectorAll(".chapter-item").forEach((button) => {
+  button.addEventListener("click", () => {
+    messageInput.value = button.dataset.question;
+    autoGrowInput();
+    closeMobileSidebar();
+    messageInput.focus();
+  });
+});
 
 
 function appendMessage(role, text, options = {}) {
@@ -184,7 +267,7 @@ function escapeHtml(text) {
 function setBusy(isBusy) {
   sendButton.disabled = isBusy;
   messageInput.disabled = isBusy;
-  sendButton.textContent = isBusy ? "Sending..." : "Send";
+  sendButton.setAttribute("aria-label", isBusy ? "กำลังส่ง" : "ส่ง");
 }
 
 function describeMode(mode) {
@@ -233,6 +316,7 @@ chatForm.addEventListener("submit", async (event) => {
   const history = state.messages.slice(-8);
   appendMessage("user", message);
   messageInput.value = "";
+  autoGrowInput();
   setBusy(true);
   const typingNode = showTypingIndicator();
 
@@ -265,12 +349,16 @@ messageInput.addEventListener("keydown", (event) => {
   }
 });
 
-clearButton.addEventListener("click", () => {
+function showWelcome() {
   state.messages = [];
   chatLog.replaceChildren();
-  appendMessage(
-    "assistant",
-    "สวัสดีครับ ถามเรื่องพื้นฐานคอมพิวเตอร์ได้เลย ระบบจะค้นหาจากตำราและอ้างอิงเลขหน้าให้",
-    { persist: false },
-  );
+  appendMessage("assistant", WELCOME_MESSAGE, { persist: false });
+}
+
+clearButton.addEventListener("click", () => {
+  setChatMenuOpen(false);
+  showWelcome();
+  messageInput.focus();
 });
+
+showWelcome();

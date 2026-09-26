@@ -34,7 +34,7 @@ NO_ANSWER = (
     "ผมยังไม่พบข้อมูลมากพอที่จะตอบคำถามนี้ได้อย่างชัดเจน"
 )
 
-GROUNDING_SYSTEM_PROMPT = """You are ChatBot-Research, a research assistant that answers questions
+GROUNDING_SYSTEM_PROMPT = """You are Polaris, a research assistant that answers questions
 about basic computer knowledge strictly from a Thai computer textbook, using
 only the provided document context.
 
@@ -62,7 +62,7 @@ Rules:
    Only give a long detailed answer when the user explicitly asks for it.
 """
 
-GENERAL_COMPUTER_SYSTEM_PROMPT = """You are ChatBot-Research, a research assistant for a
+GENERAL_COMPUTER_SYSTEM_PROMPT = """You are Polaris, a research assistant for a
 basic-computer textbook research project. The document knowledge base did NOT contain
 an answer to this question, so you are answering from your own general knowledge
 instead — but ONLY because the question is about computers, hardware, or
@@ -84,9 +84,24 @@ Rules:
 6. Default to a short, direct answer: a few sentences or a short list (roughly
    3-5 bullet points). Only give a long detailed answer when the user
    explicitly asks for it.
+7. Your training data has a cutoff and may be years older than today's date
+   (given below). If the question depends on recent information -- the
+   latest or newest models, current prices, release dates, current market
+   leaders, or "this year" -- answer only with what you actually know, and
+   say which year that knowledge is from (e.g. "ข้อมูลที่ผมมีล่าสุดคือ ...").
+   NEVER guess or extrapolate products, versions, or events that would have
+   come after your training data just because today's date is later -- do
+   not invent model names or numbers. Then say briefly that newer ones may
+   exist by today and suggest checking an official source. Timeless concepts
+   (what an ALU is, how RAM works) need no such warning.
 """
 
-CONVERSATION_SYSTEM_TEMPLATE = """You are ChatBot-Research, acting as the user's personal secretary
+
+def general_computer_system_prompt() -> str:
+    return f"{GENERAL_COMPUTER_SYSTEM_PROMPT}\nToday's date: {time.strftime('%Y-%m-%d')}\n"
+
+
+CONVERSATION_SYSTEM_TEMPLATE = """You are Polaris, acting as the user's personal secretary
 (เลขาส่วนตัว) — proactive, warm, and genuinely helpful.
 
 You can answer everyday questions conversationally, help plan, organize, and
@@ -156,6 +171,7 @@ class Settings:
     typhoon_base_url: str = field(default_factory=lambda: os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1"))
     typhoon_model: str = field(default_factory=lambda: os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct")))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
+    gemini_timeout: float = field(default_factory=lambda: _env_float("GEMINI_TIMEOUT", 12.0))
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
     min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.10))
@@ -756,9 +772,12 @@ def local_conversation_fallback(question: str, kb_files: list[str]) -> str:
     if any(token in lowered for token in THANKS_WORDS):
         return "ยินดีครับ ถ้ามีประเด็นไหนอยากให้ช่วยต่อ ถามมาได้เลย"
     if any(token in lowered for token in GREETING_WORDS):
-        return "สวัสดีครับ ผมพร้อมช่วยตอบทั้งคำถามทั่วไป และคำถามจากเอกสารที่คุณโหลดไว้ครับ"
+        return "สวัสดีครับ ผมคือ Polaris ถามเรื่องพื้นฐานคอมพิวเตอร์ได้เลยครับ"
     if any(token in lowered for token in SOCIAL_PHRASES):
-        return "ผมคือ ChatBot-Research ครับ ตอบคุยทั่วไปได้ และถ้ามีข้อมูลในไฟล์ที่โหลดไว้ ผมจะดึงจากเอกสารมาตอบให้อย่างชัดเจน"
+        return (
+            "ผมคือ Polaris ครับ ผู้ช่วยตอบคำถามเรื่องพื้นฐานคอมพิวเตอร์ "
+            "โดยค้นหาจากตำราภาษาไทย 8 บท แล้วตอบพร้อมอ้างอิงเลขหน้าและรูปประกอบ"
+        )
     if kb_files:
         return (
             "ผมยังหาเนื้อหาที่ยืนยันคำตอบนี้จากเอกสารที่โหลดไว้ไม่เจอครับ "
@@ -813,7 +832,7 @@ SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
     ("monitor", "จอภาพ", "จอแสดงผล"),
     ("keyboard", "คีย์บอร์ด", "แป้นพิมพ์"),
     ("printer", "เครื่องพิมพ์", "ปริ๊นเตอร์"),
-    ("big data", "บิ๊กดาต้า", "ข้อมูลขนาดใหญ่"),
+    ("big data", "bigdata", "บิ๊กดาต้า", "ข้อมูลขนาดใหญ่"),
     ("flash drive", "แฟลชไดรฟ์", "แฟลชไดร์ฟ"),
     ("hard disk", "harddisk", "ฮาร์ดดิสก์", "จานบันทึกข้อมูล"),
     ("input device", "อุปกรณ์นำเข้าข้อมูล", "อุปกรณ์อินพุต"),
@@ -1028,7 +1047,8 @@ class GeminiProvider:
         # Short timeout, no built-in retries: a hanging/high-demand Gemini
         # response should fail fast so the caller's fallback to the next
         # provider actually happens within the request's own time budget.
-        return genai.Client(api_key=api_key, http_options={"timeout": 25_000, "retry_options": {"attempts": 1}})
+        timeout_ms = int(self.settings.gemini_timeout * 1000)
+        return genai.Client(api_key=api_key, http_options={"timeout": timeout_ms, "retry_options": {"attempts": 1}})
 
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
         client = self._client(api_key)
@@ -1206,7 +1226,7 @@ def answer_question(
             answer = provider.conversation(
                 api_key=candidate_key,
                 prompt=general_prompt,
-                system_instruction=GENERAL_COMPUTER_SYSTEM_PROMPT,
+                system_instruction=general_computer_system_prompt(),
                 temperature=temperature,
                 history=chat_history,
             )

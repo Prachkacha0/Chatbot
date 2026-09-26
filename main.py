@@ -38,7 +38,7 @@ class ChatRequest(BaseModel):
     conversation_provider: str | None = None
 
 
-app = FastAPI(title="ChatBot-Research Web", version="2.0.0")
+app = FastAPI(title="Polaris Web", version="2.0.0")
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))

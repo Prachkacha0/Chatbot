@@ -1,4 +1,4 @@
-# ChatBot-Research
+# Polaris
 
 ระบบ chatbot สำหรับตอบคำถามเกี่ยวกับพื้นฐานคอมพิวเตอร์ โดยใช้ตำราภาษาไทย (8 บท) เป็นฐานความรู้ ผสานระหว่าง RAG (Retrieval-Augmented Generation) และ LLM จาก 2 provider คือ Gemini และ Typhoon
 
@@ -10,7 +10,8 @@
 - **Dark / light mode**: สลับโหมดสว่าง-มืด จำค่าไว้ใน localStorage
 - **Typing indicator**: แสดง animation ระหว่างรอคำตอบ
 - **Enter to send**: กด Enter ส่งข้อความ, Shift+Enter ขึ้นบรรทัดใหม่
-- **Mobile sidebar**: ปุ่ม hamburger toggle sidebar บนหน้าจอเล็ก
+- **Sidebar สารบัญ 8 บท**: กดบทเพื่อใส่คำถามตัวอย่าง ซ่อน/แสดงได้ด้วยปุ่ม ☰ (จอคอมจำค่าไว้, มือถือเป็น drawer เลื่อนออกมา)
+- **Chat card เดียว**: ช่องพิมพ์ทรงแคปซูลขยายตามข้อความ ปุ่มส่งอยู่ในช่อง ปุ่มล้างแชทอยู่ในเมนู ⋯ กันกดพลาด
 - **Rate limiting**: จำกัด 10 requests/นาที ต่อ IP ที่ `/api/chat`
 - **Error state**: แสดง error bubble สีแดงแยกจากคำตอบปกติ
 - **Source citations**: แสดงแหล่งอ้างอิงพับได้ใต้คำตอบ
@@ -69,6 +70,7 @@ http://localhost:5001
 | `CONVERSATION_PROVIDER` | `gemini` | provider สำหรับสนทนาทั่วไป (`gemini` / `typhoon` / `auto`) |
 | `TYPHOON_MODEL` | `typhoon-v2.5-30b-a3b-instruct` | model id ของ Typhoon |
 | `GEMINI_MODEL` | `gemini-3.5-flash` | model id ของ Gemini |
+| `GEMINI_TIMEOUT` | `12` | วินาทีที่รอ Gemini ก่อนสลับไปใช้ Typhoon (กันคำตอบค้างนานตอน Gemini ล่ม/คนใช้เยอะ) |
 | `TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | endpoint (OpenAI-compatible) |
 | `TOP_K` | `5` | จำนวน chunks สูงสุดที่ดึงมา |
 | `MIN_RELEVANCE` | `0.10` | คะแนนรวม (hybrid) ขั้นต่ำ |

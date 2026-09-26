@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: chatbot-research
+    name: polaris
     plan: free
     runtime: python
     region: singapore
@@ -12,7 +12,7 @@ services:
       - key: GROUNDED_PROVIDER
         value: typhoon
       - key: CONVERSATION_PROVIDER
-        value: typhoon
+        value: gemini
       - key: TYPHOON_MODEL
         value: typhoon-v2.5-30b-a3b-instruct
       - key: GEMINI_MODEL
