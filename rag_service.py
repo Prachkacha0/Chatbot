@@ -151,8 +151,9 @@ class Settings:
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
     min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.10))
-    semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.6))
+    semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.0))
     exact_qa_threshold: float = field(default_factory=lambda: _env_float("EXACT_QA_THRESHOLD", 0.85))
+    max_images_per_answer: int = field(default_factory=lambda: max(0, _env_int("MAX_IMAGES_PER_ANSWER", 2)))
     default_grounded_provider: str = field(default_factory=lambda: os.getenv("GROUNDED_PROVIDER", "typhoon").lower())
     default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
 
@@ -386,7 +387,6 @@ def chunk_pdf_pages(
 
 
 IMAGE_MAP_PATH = APP_DIR / "image_map.json"
-MAX_IMAGES_PER_ANSWER = 2
 
 
 @dataclass
@@ -440,17 +440,42 @@ def _parse_page_range(page_range: str) -> tuple[int, int] | None:
         return None
 
 
+# Descriptive or very frequent words in this textbook. On their own they don't
+# say which figure fits a question -- "เปรียบเทียบ" is a keyword of both a
+# comparator-circuit diagram and a number-base table -- so one generic hit
+# isn't enough to show an image, but two generic hits or one specific are.
+GENERIC_IMAGE_KEYWORDS = frozenset({
+    "ข้อมูล", "ระบบ", "คอมพิวเตอร์", "การทำงาน", "หน่วย", "ประเภท", "สัญญาณ",
+    "วงจร", "ตัวอย่าง", "ดิจิทัล", "แปลง", "โครงสร้าง", "รหัส", "พื้นฐาน",
+    "ระดับ", "ผลลัพธ์", "การประมวลผล", "การสื่อสาร", "อินพุต", "ตาราง",
+    "กระบวนการ", "ส่วนประกอบ", "องค์ประกอบ", "ขั้นตอน", "สัญลักษณ์",
+    "เปรียบเทียบ", "ความสัมพันธ์", "คุณลักษณะ", "การแสดง", "การเขียน",
+    "การแบ่งส่วน", "ช่วงเวลา", "ช่องทาง",
+    "data", "model", "unit", "state", "input", "two",
+})
+
+
+def _keyword_in_question(keyword: str, lowered_question: str) -> bool:
+    kw = keyword.lower()
+    if kw.isascii():
+        # Whole-word match for English, so "ip" doesn't fire inside "chip".
+        # Thai has no word spacing, so Thai keywords stay substring matches.
+        return re.search(rf"(?<![a-z0-9]){re.escape(kw)}(?![a-z0-9])", lowered_question) is not None
+    return kw in lowered_question
+
+
 def match_images_for_passages(
     passages: list[Passage],
     question: str,
     image_entries: list[ImageEntry],
     *,
-    max_images: int = MAX_IMAGES_PER_ANSWER,
+    max_images: int,
 ) -> list[dict[str, Any]]:
     """Pick images to attach to a grounded answer. An image is only eligible
     when both hold: its source page falls inside the page range of one of the
-    answer's grounding passages, AND at least one of its keywords appears in
-    the question. Among eligible images, more keyword hits rank first."""
+    answer's grounding passages, AND its keywords match the question (at least
+    one specific keyword, or at least two generic ones). Among eligible
+    images, more specific hits rank first, then more generic hits."""
     if not image_entries:
         return []
 
@@ -467,17 +492,22 @@ def match_images_for_passages(
 
     lowered_question = question.strip().lower()
 
-    def keyword_hits(entry: ImageEntry) -> int:
-        return sum(1 for kw in entry.keywords if kw and kw.lower() in lowered_question)
+    scored: list[tuple[int, int, ImageEntry]] = []
+    for entry in image_entries:
+        if entry.page not in candidate_pages:
+            continue
+        specific = generic = 0
+        for kw in entry.keywords:
+            if kw and _keyword_in_question(kw, lowered_question):
+                if kw.lower() in GENERIC_IMAGE_KEYWORDS:
+                    generic += 1
+                else:
+                    specific += 1
+        if specific >= 1 or generic >= 2:
+            scored.append((specific, generic, entry))
+    scored.sort(key=lambda item: (-item[0], -item[1], item[2].page, item[2].id))
 
-    matched = [
-        entry
-        for entry in image_entries
-        if entry.page in candidate_pages and keyword_hits(entry) > 0
-    ]
-    matched.sort(key=lambda entry: (-keyword_hits(entry), entry.page, entry.id))
-
-    selected = matched[:max_images]
+    selected = [entry for _, _, entry in scored[:max_images]]
     return [
         {
             "id": entry.id,
@@ -515,19 +545,29 @@ def _embed_texts(texts: list[str], model: str, api_key: str) -> np.ndarray | Non
     raising) on any failure so callers can fall back to TF-IDF-only retrieval."""
     if not texts or not api_key:
         return None
-    try:
-        client = genai.Client(api_key=api_key, http_options={"timeout": 45_000})
-        # The API caps how many texts can be embedded per call, so batch requests.
-        batch_size = 100
-        vectors: list[list[float]] = []
-        for start in range(0, len(texts), batch_size):
-            batch = texts[start : start + batch_size]
+    client = genai.Client(api_key=api_key, http_options={"timeout": 45_000})
+    # The free tier caps embedding at roughly 30k tokens/minute; 50 textbook
+    # chunks is ~26k tokens, so one batch fits in a single minute's quota.
+    batch_size = 50
+    vectors: list[list[float]] = []
+    for start in range(0, len(texts), batch_size):
+        batch = texts[start : start + batch_size]
+        try:
             response = client.models.embed_content(model=model, contents=batch)
-            vectors.extend(embedding.values for embedding in response.embeddings)
-        return np.array(vectors, dtype=np.float32)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Embedding request failed, falling back to keyword-only retrieval: %s", exc)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Embedding batch failed (items %d-%d): %s", start, start + len(batch), exc)
+            continue
+        vectors.extend(embedding.values for embedding in response.embeddings)
+
+    # Embeddings must line up row-for-row with the chunks, so any gap means
+    # falling back to keyword-only rather than returning a partial matrix.
+    if len(vectors) != len(texts):
+        logger.warning(
+            "Embedding request incomplete (%d/%d texts embedded), falling back to keyword-only retrieval",
+            len(vectors), len(texts),
+        )
         return None
+    return np.array(vectors, dtype=np.float32)
 
 
 def _cosine_scores(query_vector: np.ndarray, matrix: np.ndarray) -> np.ndarray:
@@ -598,8 +638,12 @@ def build_index(signature: tuple[Any, ...], settings: Settings | None = None) ->
     char_matrix = char_vectorizer.fit_transform(texts)
     matrix = hstack([word_matrix, char_matrix])
 
-    gemini_key = resolve_api_key("gemini")
-    embeddings = _embed_texts(texts, settings.embedding_model, gemini_key)
+    # MIN_RELEVANCE is calibrated for TF-IDF-only scores; hybrid scores sit on a
+    # much higher scale, so semantic must stay opt-in rather than switching on
+    # whenever a key happens to have enough embedding quota.
+    embeddings = None
+    if settings.semantic_weight > 0:
+        embeddings = _embed_texts(texts, settings.embedding_model, resolve_api_key("gemini"))
 
     return RetrievalIndex(
         signature=signature,
@@ -720,10 +764,15 @@ SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
     ("gray code", "รหัสเกรย์"),
     ("ascii code", "รหัสแอสกี้", "แอสกี้"),
     ("parity bit", "พาริตี้บิต", "บิตพาริตี"),
-    ("logic gate", "เกตลอจิก", "ลอจิกเกต"),
+    ("logic gate", "เกตลอจิก", "ลอจิกเกต", "เกต", "เกท", "gate"),
     ("digital logic", "ดิจิทัลลอจิก"),
     ("information technology", "เทคโนโลยีสารสนเทศ"),
     ("data communication", "การสื่อสารข้อมูล"),
+    ("motherboard", "mainboard", "เมนบอร์ด", "แผงวงจรหลัก"),
+    ("lan", "local area network", "เครือข่ายท้องถิ่น", "เครือข่ายแลน", "แลน"),
+    ("algorithm", "อัลกอริทึม", "อัลกอริธึม"),
+    ("pseudocode", "pseudo code", "รหัสเทียม"),
+    ("operating system", "os", "ระบบปฏิบัติการ"),
 )
 
 _SYNONYM_LOOKUP: dict[str, tuple[str, ...]] = {}
@@ -1074,7 +1123,9 @@ def answer_question(
         # general computer knowledge instead of surfacing that refusal, same
         # as the "no passages retrieved" case below.
         if "ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร" not in answer:
-            images = match_images_for_passages(passages, question, kb.image_entries)
+            images = match_images_for_passages(
+                passages, question, kb.image_entries, max_images=settings.max_images_per_answer
+            )
             return {
                 "answer": answer,
                 "passages": [

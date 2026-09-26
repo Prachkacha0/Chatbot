@@ -23,7 +23,7 @@ IMAGE_MAP_PATH = PROJECT_ROOT / "image_map.json"
 STOPWORDS = thai_stopwords()
 # Single-character particles/punctuation-ish tokens that survive tokenization
 # but carry no search value on their own.
-EXTRA_STOPWORDS = {"ๆ", "ๆ่", "-", "(", ")", ":", "ๆ", "฿"}
+EXTRA_STOPWORDS = {"ๆ", "ๆ่", "-", "(", ")", ":", "ๆ", "฿", "ตัว", "จำนวน", "ประกอบด้วย", "สำหรับ"}
 
 # Domain/transliterated technical terms the default newmm dictionary doesn't
 # recognize as single words, so it mis-splits them into meaningless syllable
@@ -33,6 +33,9 @@ CUSTOM_WORDS = {
     "ลอจิก", "ฟลิปฟลอป", "รีจีสเตอร์", "บล็อกไดอะแกรม", "ไดอะแกรม",
     "อินเวอร์เตอร์", "แอนด์เกต", "อีซีแอล", "ดิจิทัลลอจิก",
     "เกต", "สวิตซ์", "วงจร",
+    # Compounds that are only meaningful whole ("เลขฐานสิบหก" -> "หก" alone is noise).
+    "เลขฐานสิบหก", "เลขฐาน", "รหัสเพิ่ม", "รหัสเกรย์", "สามสถานะ", "แรงดันตก",
+    "แรงดันขึ้น", "พ่นหมึก", "เครื่องคำนวณ", "แบบจุด", "วงจรนับ", "ไมโครโปรเซสเซอร์",
 }
 _TOKENIZER = Tokenizer(custom_dict=set(thai_words()) | CUSTOM_WORDS, engine="newmm")
 
@@ -61,7 +64,7 @@ def tokenize_keyword(raw: str) -> list[str]:
         token = token.strip()
         if not token:
             continue
-        if token in STOPWORDS or token in EXTRA_STOPWORDS:
+        if token in STOPWORDS or token in EXTRA_STOPWORDS or token.isdigit():
             continue
         if len(token) <= 1 and is_thai(token):
             # Single Thai characters are almost never meaningful search terms

@@ -4,7 +4,7 @@
 
 ## Features
 
-- **RAG (hybrid retrieval)**: ค้นหาข้อมูลจาก knowledge base ด้วย TF-IDF (keyword) ผสาน semantic embedding (Gemini) แล้วส่ง context ให้ LLM ตอบ พร้อมแหล่งอ้างอิง — ถ้าไม่มี `GEMINI_API_KEY` หรือเรียก embedding ไม่สำเร็จ ระบบจะ fallback ไปใช้ TF-IDF อย่างเดียวอัตโนมัติ
+- **RAG retrieval**: ค้นหาข้อมูลจาก knowledge base ด้วย TF-IDF (keyword) พร้อมขยายคำค้นด้วยพจนานุกรมคำพ้องความหมาย แล้วส่ง context ให้ LLM ตอบ พร้อมแหล่งอ้างอิง — รองรับ semantic embedding (Gemini) เป็นตัวเลือกเสริมผ่าน `SEMANTIC_WEIGHT` (ปิดไว้เป็นค่าเริ่มต้น)
 - **Dual provider**: ใช้ Typhoon สำหรับคำถามอิงเอกสาร, Gemini สำหรับการสนทนาทั่วไป (ตั้งค่าได้)
 - **Markdown rendering**: คำตอบ render markdown ได้ (bold, bullet, code block ฯลฯ)
 - **Dark / light mode**: สลับโหมดสว่าง-มืด จำค่าไว้ใน localStorage
@@ -72,8 +72,9 @@ http://localhost:5001
 | `TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | endpoint (OpenAI-compatible) |
 | `TOP_K` | `5` | จำนวน chunks สูงสุดที่ดึงมา |
 | `MIN_RELEVANCE` | `0.10` | คะแนนรวม (hybrid) ขั้นต่ำ |
+| `MAX_IMAGES_PER_ANSWER` | `2` | จำนวนรูปจากตำราสูงสุดที่แนบกับคำตอบหนึ่งข้อ (`0` = ไม่แนบรูป) |
 | `EMBEDDING_MODEL` | `gemini-embedding-001` | model id สำหรับ semantic embedding |
-| `SEMANTIC_WEIGHT` | `0.6` | น้ำหนักของ semantic score เทียบกับ TF-IDF (0 = keyword-only, 1 = semantic-only) |
+| `SEMANTIC_WEIGHT` | `0` | น้ำหนักของ semantic score เทียบกับ TF-IDF (0 = keyword-only, 1 = semantic-only) — ปิดไว้เป็นค่าเริ่มต้น ถ้าเปิดต้องปรับ `MIN_RELEVANCE` ใหม่ด้วย เพราะคะแนน hybrid อยู่คนละสเกลกับ TF-IDF |
 
 ## Provider behavior
 
@@ -123,5 +124,4 @@ GEMINI_API_KEY=...
 
 - Source citation ใช้ path สัมพัทธ์จาก `data/` ทำให้ชื่อไฟล์ซ้ำกันไม่ชน
 - TF-IDF ใช้ทั้ง word n-grams และ character n-grams เพื่อ matching ที่ดีขึ้น
-- Semantic embedding คำนวณครั้งเดียวตอน build index (cache ไว้ในหน่วยความจำ) และคำนวณ query embedding อีกครั้งต่อคำถาม — ถ้า Gemini API ไม่พร้อมใช้งาน (ไม่มี key, หมด quota, ฯลฯ) ระบบ log warning แล้ว fallback ไปใช้ TF-IDF อย่างเดียวโดยอัตโนมัติ ไม่ทำให้แอปล่ม
-- `app.py` เก็บไว้เป็น legacy Streamlit prototype เท่านั้น ไม่ใช้งานแล้ว
+- Semantic embedding (เมื่อตั้ง `SEMANTIC_WEIGHT` > 0) คำนวณครั้งเดียวตอน build index (cache ไว้ในหน่วยความจำ) และคำนวณ query embedding อีกครั้งต่อคำถาม — ถ้า Gemini API ไม่พร้อมใช้งาน (ไม่มี key, หมด quota, ฯลฯ) ระบบ log warning แล้ว fallback ไปใช้ TF-IDF อย่างเดียวโดยอัตโนมัติ ไม่ทำให้แอปล่ม (free tier มีโควต้าราว 30,000 token/นาที ไม่พอ embed ตำราทั้งเล่มในครั้งเดียว)

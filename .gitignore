@@ -7,9 +7,6 @@ __pycache__/
 .venv/
 venv/
 
-# Streamlit
-.streamlit/secrets.toml
-
 # Claude Code local session state
 .claude/scheduled_tasks.lock
 
