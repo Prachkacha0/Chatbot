@@ -546,6 +546,14 @@ def _keyword_in_question(keyword: str, lowered_question: str) -> bool:
     return kw in lowered_question
 
 
+def _image_keyword_matches(keyword: str, lowered_question: str) -> bool:
+    # A keyword also matches through its own synonym group ("RAM" <- "แรม").
+    # Expanding the keyword side, not the question, keeps a broad group
+    # member like "หน่วยความจำหลัก" from hitting other images' keywords.
+    group = _SYNONYM_LOOKUP.get(keyword.lower(), (keyword,))
+    return any(_keyword_in_question(term, lowered_question) for term in group)
+
+
 def match_images_for_passages(
     passages: list[Passage],
     question: str,
@@ -580,7 +588,7 @@ def match_images_for_passages(
             continue
         specific = generic = 0
         for kw in entry.keywords:
-            if kw and _keyword_in_question(kw, lowered_question):
+            if kw and _image_keyword_matches(kw, lowered_question):
                 if kw.lower() in GENERIC_IMAGE_KEYWORDS:
                     generic += 1
                 else:
