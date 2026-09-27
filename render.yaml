@@ -16,7 +16,7 @@ services:
       - key: TYPHOON_MODEL
         value: typhoon-v2.5-30b-a3b-instruct
       - key: GEMINI_MODEL
-        value: gemini-3.5-flash
+        value: gemini-3.6-flash
       - key: TOP_K
         value: "5"
       - key: MIN_RELEVANCE

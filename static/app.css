@@ -9,6 +9,7 @@
   --accent: #3a86ff;
   --accent-deep: #2667cc;
   --on-accent: #ffffff;
+  color-scheme: light;
   --warm: #ffb703;
   --danger: #c44900;
   --shadow: 0 24px 60px rgba(58, 134, 255, 0.12);
@@ -54,6 +55,7 @@
     --accent: #60a5fa;
     --accent-deep: #93c5fd;
     --on-accent: #0d1526;
+    color-scheme: dark;
     --warm: #ffb703;
     --danger: #f57d42;
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
@@ -99,6 +101,7 @@
   --accent: #60a5fa;
   --accent-deep: #93c5fd;
   --on-accent: #0d1526;
+  color-scheme: dark;
   --warm: #ffb703;
   --danger: #f57d42;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
@@ -410,6 +413,12 @@ button {
 
 .menu-item:hover {
   background: var(--danger-pill-bg);
+}
+
+.chat-log,
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
 }
 
 .chat-log {

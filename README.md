@@ -69,7 +69,7 @@ http://localhost:5001
 | `GROUNDED_PROVIDER` | `typhoon` | provider สำหรับคำถามอิงเอกสาร (`gemini` / `typhoon` / `auto`) |
 | `CONVERSATION_PROVIDER` | `gemini` | provider สำหรับสนทนาทั่วไป (`gemini` / `typhoon` / `auto`) |
 | `TYPHOON_MODEL` | `typhoon-v2.5-30b-a3b-instruct` | model id ของ Typhoon |
-| `GEMINI_MODEL` | `gemini-3.5-flash` | model id ของ Gemini |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | model id ของ Gemini |
 | `GEMINI_TIMEOUT` | `12` | วินาทีที่รอ Gemini ก่อนสลับไปใช้ Typhoon (กันคำตอบค้างนานตอน Gemini ล่ม/คนใช้เยอะ) |
 | `TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | endpoint (OpenAI-compatible) |
 | `TOP_K` | `5` | จำนวน chunks สูงสุดที่ดึงมา |

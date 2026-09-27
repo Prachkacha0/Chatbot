@@ -53,6 +53,13 @@ Rules:
 4. If the document context does not contain enough information to answer the
    question, respond with: "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร
    กรุณาถามเกี่ยวกับเนื้อหาในตำราพื้นฐานคอมพิวเตอร์ครับ"
+   Give that same response when the context is only loosely related to what
+   the user actually wants. Judge the intent together with the recent
+   conversation (a short follow-up such as "and for work?" continues the
+   previous request). In particular, the textbook does not cover buying
+   advice, recommended specs or builds, prices, or current products -- for
+   those, give the response above. Never repurpose a textbook passage to
+   answer a different question from the one being asked.
 5. Never guess, infer, or add information not found in the documents.
 6. Use recent conversation to understand the user's intent.
 7. Keep your tone natural and clear.
@@ -76,9 +83,9 @@ Rules:
 2. If it IS about computers, answer helpfully and accurately from your own
    knowledge.
 3. Always start the answer by making clear this is general knowledge, not from
-   the research documents — for example begin with something like
-   "เรื่องนี้ไม่มีในเอกสารวิจัยที่ใช้ครับ แต่ตามความรู้ทั่วไป ...". Never imply
-   the answer came from the loaded documents.
+   the textbook: begin with the phrase "เรื่องนี้ไม่มีในตำราครับ แต่ตามความรู้ทั่วไป"
+   and continue straight into the answer in the same sentence (do not write
+   "..." after it). Never imply the answer came from the textbook.
 4. Keep your tone natural and clear.
 5. Answer in the same language as the user.
 6. Default to a short, direct answer: a few sentences or a short list (roughly
@@ -87,8 +94,9 @@ Rules:
 7. Your training data has a cutoff and may be years older than today's date
    (given below). If the question depends on recent information -- the
    latest or newest models, current prices, release dates, current market
-   leaders, or "this year" -- answer only with what you actually know, and
-   say which year that knowledge is from (e.g. "ข้อมูลที่ผมมีล่าสุดคือ ...").
+   leaders, or "this year" -- give the newest information you genuinely
+   know (do not understate or hold back newer knowledge you have), and say
+   roughly which year it is from (e.g. "ข้อมูลที่ผมมีล่าสุดคือ ...").
    NEVER guess or extrapolate products, versions, or events that would have
    come after your training data just because today's date is later -- do
    not invent model names or numbers. Then say briefly that newer ones may
@@ -170,7 +178,7 @@ def _env_float(name: str, default: float) -> float:
 class Settings:
     typhoon_base_url: str = field(default_factory=lambda: os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1"))
     typhoon_model: str = field(default_factory=lambda: os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct")))
-    gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.5-flash"))
+    gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.6-flash"))
     gemini_timeout: float = field(default_factory=lambda: _env_float("GEMINI_TIMEOUT", 12.0))
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
@@ -768,7 +776,7 @@ def build_context(passages: list[Passage]) -> str:
 def local_conversation_fallback(question: str, kb_files: list[str]) -> str:
     lowered = question.strip().lower()
     if any(token in lowered for token in BYE_WORDS):
-        return "ได้เลยครับ ไว้คุยกันใหม่ ถ้ามีคำถามเกี่ยวกับเอกสารเพิ่มเติมส่งมาได้เสมอครับ"
+        return "ได้เลยครับ ไว้คุยกันใหม่ ถ้ามีคำถามเรื่องพื้นฐานคอมพิวเตอร์ส่งมาได้เสมอครับ"
     if any(token in lowered for token in THANKS_WORDS):
         return "ยินดีครับ ถ้ามีประเด็นไหนอยากให้ช่วยต่อ ถามมาได้เลย"
     if any(token in lowered for token in GREETING_WORDS):
@@ -780,10 +788,10 @@ def local_conversation_fallback(question: str, kb_files: list[str]) -> str:
         )
     if kb_files:
         return (
-            "ผมยังหาเนื้อหาที่ยืนยันคำตอบนี้จากเอกสารที่โหลดไว้ไม่เจอครับ "
-            "ถ้าต้องการ ลองถามให้เจาะจงขึ้น หรือถามเกี่ยวกับไฟล์ที่อยู่ในระบบได้เลย"
+            "ผมยังหาเนื้อหาที่ตอบคำถามนี้ในตำราไม่เจอครับ "
+            "ลองถามให้เจาะจงขึ้น หรือเลือกบทจากแถบข้างเพื่อดูคำถามตัวอย่างได้เลย"
         )
-    return "ตอนนี้ยังไม่มีเอกสารถูกโหลดในระบบครับ ถ้าเพิ่มไฟล์แล้ว ผมจะช่วยค้นและตอบจากเนื้อหาให้ได้"
+    return "ตอนนี้ระบบยังโหลดตำราไม่ได้ครับ กรุณาแจ้งผู้ดูแลระบบ"
 
 
 def is_social_message(question: str) -> bool:
@@ -852,6 +860,11 @@ SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
     ("operating system", "os", "ระบบปฏิบัติการ"),
 )
 
+# "คอม" is everyday shorthand for "คอมพิวเตอร์", but it can't be a normal
+# synonym group: it's a substring of the full word and of unrelated words
+# (คอมไพเลอร์, คอมโพเนนต์, คอมมานด์ ...), so it's matched with exclusions.
+_KOM_SHORTHAND = re.compile(r"คอม(?!พิวเตอร์|ไพ|โพ|มาน|มิว|เมนต์|แพ)")
+
 _SYNONYM_LOOKUP: dict[str, tuple[str, ...]] = {}
 for _group in SYNONYM_GROUPS:
     for _term in _group:
@@ -863,6 +876,7 @@ def expand_query_with_synonyms(query: str) -> str:
     TF-IDF has surface-level overlap with passages that use different wording
     for the same concept. Longer terms are checked first so e.g. "hard disk"
     matches before a shorter unrelated substring could."""
+    query = _KOM_SHORTHAND.sub("คอมพิวเตอร์", query)
     lowered = query.lower()
     additions: list[str] = []
     seen_groups: set[tuple[str, ...]] = set()
