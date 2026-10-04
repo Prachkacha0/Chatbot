@@ -15,7 +15,6 @@ from rag_service import (
     APIError,
     APP_DIR,
     AuthenticationError,
-    DATA_DIR,
     KnowledgeBase,
     PROVIDERS,
     Settings,
@@ -75,7 +74,6 @@ def _sidebar_payload() -> dict:
         "doc_count": len(files),
         "chunk_count": sum(item["chunks"] for item in files),
         "char_count": sum(item["chars"] for item in files),
-        "data_dir": str(DATA_DIR),
         "has_typhoon_key": bool(resolve_api_key("typhoon")),
         "has_gemini_key": bool(resolve_api_key("gemini")),
         "default_grounded_provider": settings.default_grounded_provider,
@@ -97,12 +95,6 @@ def home(request: Request) -> HTMLResponse:
 
 @app.get("/api/status")
 def status() -> dict:
-    return _sidebar_payload()
-
-
-@app.post("/api/reload")
-def reload_documents() -> dict:
-    kb.refresh(force=True)
     return _sidebar_payload()
 
 

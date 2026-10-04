@@ -5,14 +5,14 @@ services:
     runtime: python
     region: singapore
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
     healthCheckPath: /health
     autoDeployTrigger: commit
     envVars:
       - key: GROUNDED_PROVIDER
         value: typhoon
       - key: CONVERSATION_PROVIDER
-        value: gemini
+        value: typhoon
       - key: TYPHOON_MODEL
         value: typhoon-v2.5-30b-a3b-instruct
       - key: GEMINI_MODEL

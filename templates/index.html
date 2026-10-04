@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/app.css?v=9" />
+    <link rel="stylesheet" href="/static/app.css?v=13" />
   </head>
   <body>
     <div class="app">
@@ -26,6 +26,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
         <h1 class="brand"><span class="brand-star" aria-hidden="true">✦</span>Polaris</h1>
+        <button id="topbar-new-chat" class="icon-button topbar-new-chat" type="button" aria-label="แชทใหม่" title="แชทใหม่">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
         <button id="theme-toggle" class="icon-button theme-toggle" type="button" aria-label="สลับโหมดสว่าง/มืด" title="สลับโหมดสว่าง/มืด">
           <span class="theme-icon-light">☀️</span>
           <span class="theme-icon-dark">🌙</span>
@@ -33,50 +36,53 @@
       </header>
 
       <div class="layout">
-        <aside id="sidebar" class="sidebar" aria-label="เนื้อหาในตำรา">
-          <h2 class="sidebar-heading">เนื้อหาในตำรา</h2>
-          <p class="sidebar-hint">กดบทที่สนใจเพื่อใส่คำถามตัวอย่าง</p>
-          <div class="chapter-list">
-            <button type="button" class="chapter-item" data-question="ประวัติคอมพิวเตอร์เป็นมาอย่างไร"><span class="chapter-num">1</span><span>ประวัติคอมพิวเตอร์</span></button>
-            <button type="button" class="chapter-item" data-question="องค์ประกอบของระบบคอมพิวเตอร์มีอะไรบ้าง"><span class="chapter-num">2</span><span>พื้นฐานคอมพิวเตอร์</span></button>
-            <button type="button" class="chapter-item" data-question="RAM กับ ROM ต่างกันอย่างไร"><span class="chapter-num">3</span><span>อุปกรณ์คอมพิวเตอร์</span></button>
-            <button type="button" class="chapter-item" data-question="เทคโนโลยีสารสนเทศคืออะไร"><span class="chapter-num">4</span><span>เทคโนโลยีสารสนเทศ</span></button>
-            <button type="button" class="chapter-item" data-question="องค์ประกอบของการสื่อสารข้อมูลมีอะไรบ้าง"><span class="chapter-num">5</span><span>การสื่อสารข้อมูล</span></button>
-            <button type="button" class="chapter-item" data-question="ลอจิกเกต AND ทำงานอย่างไร"><span class="chapter-num">6</span><span>หลักการดิจิทัล</span></button>
-            <button type="button" class="chapter-item" data-question="รหัส BCD คืออะไร"><span class="chapter-num">7</span><span>การเข้ารหัส</span></button>
-            <button type="button" class="chapter-item" data-question="Big Data คืออะไร"><span class="chapter-num">8</span><span>Big Data</span></button>
-          </div>
+        <aside id="sidebar" class="sidebar" aria-label="ประวัติแชท">
+          <button id="new-chat-btn" class="new-chat-button" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            แชทใหม่
+          </button>
+          <nav id="chat-history" class="chat-history" aria-label="แชทที่ผ่านมา"></nav>
           <p class="sidebar-about">
-            RAG Chatbot สำหรับงานวิจัยพื้นฐานคอมพิวเตอร์ ค้นหาจากตำราภาษาไทย 8 บท พร้อมอ้างอิงเลขหน้าและรูปประกอบ
+            ประวัติแชทเก็บไว้ในเบราว์เซอร์นี้เท่านั้น สูงสุด 20 แชท
           </p>
         </aside>
         <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
 
         <main class="chat-card">
           <div class="chat-head">
-            <h2 class="chat-title">ถามเรื่องพื้นฐานคอมพิวเตอร์</h2>
-            <div class="menu">
-              <button
-                id="chat-menu-btn"
-                class="icon-button"
-                type="button"
-                aria-label="เมนูแชท"
-                aria-haspopup="menu"
-                aria-expanded="false"
-                aria-controls="chat-menu"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></svg>
-              </button>
-              <div id="chat-menu" class="menu-list" role="menu" hidden>
-                <button id="clear-btn" class="menu-item" type="button" role="menuitem">ล้างแชท</button>
-              </div>
-            </div>
+            <h2 id="chat-title" class="chat-title">แชทใหม่</h2>
           </div>
 
           <section id="chat-log" class="chat-log" aria-live="polite"></section>
 
           <form id="chat-form" class="composer">
+            <div id="chapter-popover" class="chapter-popover" role="dialog" aria-labelledby="chapter-heading" hidden>
+              <h3 id="chapter-heading" class="chapter-heading">เนื้อหาในตำรา</h3>
+              <p class="chapter-hint">เลือกบทเพื่อใส่คำถามตัวอย่าง</p>
+              <div class="chapter-list">
+                <button type="button" class="chapter-item" data-question="ประวัติคอมพิวเตอร์เป็นมาอย่างไร"><span class="chapter-num">1</span><span>ประวัติคอมพิวเตอร์</span></button>
+                <button type="button" class="chapter-item" data-question="องค์ประกอบของระบบคอมพิวเตอร์มีอะไรบ้าง"><span class="chapter-num">2</span><span>พื้นฐานคอมพิวเตอร์</span></button>
+                <button type="button" class="chapter-item" data-question="RAM กับ ROM ต่างกันอย่างไร"><span class="chapter-num">3</span><span>อุปกรณ์คอมพิวเตอร์</span></button>
+                <button type="button" class="chapter-item" data-question="เทคโนโลยีสารสนเทศคืออะไร"><span class="chapter-num">4</span><span>เทคโนโลยีสารสนเทศ</span></button>
+                <button type="button" class="chapter-item" data-question="องค์ประกอบของการสื่อสารข้อมูลมีอะไรบ้าง"><span class="chapter-num">5</span><span>การสื่อสารข้อมูล</span></button>
+                <button type="button" class="chapter-item" data-question="ลอจิกเกต AND ทำงานอย่างไร"><span class="chapter-num">6</span><span>หลักการดิจิทัล</span></button>
+                <button type="button" class="chapter-item" data-question="รหัส BCD คืออะไร"><span class="chapter-num">7</span><span>การเข้ารหัส</span></button>
+                <button type="button" class="chapter-item" data-question="Big Data คืออะไร"><span class="chapter-num">8</span><span>Big Data</span></button>
+              </div>
+            </div>
             <div class="composer-pill">
+              <button
+                id="chapter-btn"
+                class="icon-button chapter-button"
+                type="button"
+                aria-label="สารบัญตำรา"
+                title="สารบัญตำรา"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="chapter-popover"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5zM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5" /></svg>
+              </button>
               <label for="message-input" class="sr-only">คำถาม</label>
               <textarea
                 id="message-input"
@@ -112,8 +118,16 @@
       <p class="image-lightbox-caption"></p>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
-    <script src="/static/app.js?v=5" defer></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"
+      integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"
+      integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/static/app.js?v=9" defer></script>
   </body>
 </html>

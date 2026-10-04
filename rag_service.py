@@ -22,6 +22,8 @@ from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from web_search import WebSource, search_wikipedia
+
 load_dotenv(override=True)
 
 APP_DIR = Path(__file__).resolve().parent
@@ -76,10 +78,15 @@ instead — but ONLY because the question is about computers, hardware, or
 information technology.
 
 Rules:
-1. First check: is this question about computers, computer hardware, software,
-   or information technology in a general sense? If NOT (e.g. food, travel,
-   weather, unrelated small talk), respond ONLY with: "ขออภัยครับ
-   ผมตอบได้เฉพาะเรื่องคอมพิวเตอร์เท่านั้นครับ"
+1. First check what kind of message this is:
+   a. Casual small talk aimed at you (e.g. "กินข้าวยัง", "เป็นไงบ้าง",
+      "เหนื่อยไหม"): reply warmly in one short sentence and invite a
+      computer question, e.g. "ผมเป็น AI เลยไม่ได้กินข้าวครับ
+      ถ้ามีคำถามเรื่องคอมพิวเตอร์ ถามได้เลยครับ". Rules 2-7 don't apply.
+   b. A request for information that is not about computers, hardware,
+      software, or IT (e.g. recipes, travel, weather): respond ONLY with:
+      "ขออภัยครับ ผมตอบได้เฉพาะเรื่องคอมพิวเตอร์เท่านั้นครับ"
+   c. Otherwise it's a computer question: follow the rules below.
 2. If it IS about computers, answer helpfully and accurately from your own
    knowledge.
 3. Always start the answer by making clear this is general knowledge, not from
@@ -105,8 +112,44 @@ Rules:
 """
 
 
-def general_computer_system_prompt() -> str:
-    return f"{GENERAL_COMPUTER_SYSTEM_PROMPT}\nToday's date: {time.strftime('%Y-%m-%d')}\n"
+WEB_RESULTS_RULES = """
+WEB SEARCH RESULTS from Wikipedia, retrieved today, are included in the user
+message. They are more recent than your training data. When they cover the
+question, these rules replace the opening phrase in rule 3 and the warning in
+rule 7:
+- Base time-sensitive facts (latest or current models, lineups, release dates)
+  on the results, not on your memory, and do not add an "information may be
+  out of date" warning for facts the results cover.
+- Begin with "เรื่องนี้ไม่มีในตำราครับ แต่จากข้อมูลบน Wikipedia" and continue
+  straight into the answer in the same sentence.
+- Copy model names, numbers and dates exactly as the results state them;
+  never change a year or month from what the results say.
+- Cite the article you used, e.g. (Wikipedia: iPhone).
+- If the results don't actually answer the question, ignore them and follow
+  rules 1-7 as written.
+"""
+
+SEARCH_QUERY_SYSTEM_PROMPT = """You turn a user's latest message into English
+Wikipedia search terms. Wikipedia search matches article titles and topics, so
+use the name of the product line, brand, or technology (e.g. iPhone, Nvidia
+GeForce, AMD Ryzen, Linux) -- never words like latest, newest, best, fastest,
+now, or a year.
+Output ONLY one search term, or two separated by " | " when the question
+compares or spans two product lines (e.g. Intel Core | AMD Ryzen). No quotes,
+no explanation.
+Output the single word NONE when the message is small talk or not about
+computers, technology, or IT.
+Use the recent conversation to resolve follow-ups, e.g. a follow-up
+"isn't the newest one 18?" after asking about iPhones becomes: iPhone 18
+"""
+
+
+SEARCH_QUERY_TIME_BUDGET = 8.0
+
+
+def general_computer_system_prompt(*, with_web_results: bool = False) -> str:
+    rules = WEB_RESULTS_RULES if with_web_results else ""
+    return f"{GENERAL_COMPUTER_SYSTEM_PROMPT}{rules}\nToday's date: {time.strftime('%Y-%m-%d')}\n"
 
 
 CONVERSATION_SYSTEM_TEMPLATE = """You are Polaris, acting as the user's personal secretary
@@ -180,6 +223,7 @@ class Settings:
     typhoon_model: str = field(default_factory=lambda: os.getenv("TYPHOON_MODEL", os.getenv("MODEL", "typhoon-v2.5-30b-a3b-instruct")))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.6-flash"))
     gemini_timeout: float = field(default_factory=lambda: _env_float("GEMINI_TIMEOUT", 12.0))
+    web_search: str = field(default_factory=lambda: os.getenv("WEB_SEARCH", "wikipedia").lower())
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
     min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.10))
@@ -187,7 +231,7 @@ class Settings:
     exact_qa_threshold: float = field(default_factory=lambda: _env_float("EXACT_QA_THRESHOLD", 0.85))
     max_images_per_answer: int = field(default_factory=lambda: max(0, _env_int("MAX_IMAGES_PER_ANSWER", 2)))
     default_grounded_provider: str = field(default_factory=lambda: os.getenv("GROUNDED_PROVIDER", "typhoon").lower())
-    default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "gemini").lower())
+    default_conversation_provider: str = field(default_factory=lambda: os.getenv("CONVERSATION_PROVIDER", "typhoon").lower())
 
 
 _ARABIC_TO_THAI_DIGITS = str.maketrans("0123456789", "๐๑๒๓๔๕๖๗๘๙")
@@ -832,6 +876,77 @@ def build_conversation_prompt(question: str, history: list[dict[str, str]] | Non
     )
 
 
+def build_web_prompt(question: str, history: list[dict[str, str]] | None, sources: list[WebSource]) -> str:
+    blocks = [f"[{i}] {source.title} ({source.url})\n{source.text}" for i, source in enumerate(sources, 1)]
+    results = "\n\n".join(blocks)
+    return (
+        f"WEB SEARCH RESULTS (Wikipedia, retrieved {time.strftime('%Y-%m-%d')}):\n"
+        f"{results}\n\n"
+        f"{build_conversation_prompt(question, history)}"
+    )
+
+
+def cited_web_sources(answer: str, sources: list[WebSource]) -> list[WebSource]:
+    """Keep only the articles the answer names, so a stray search hit (e.g.
+    "Monty Python" for a Python question) isn't shown as a source. Titles are
+    compared without their disambiguation suffix: "Python (programming
+    language)" counts as cited when the answer says "Python"."""
+    lowered = answer.lower()
+    if not sources or "wikipedia" not in lowered:
+        return []
+    cited: list[WebSource] = []
+    seen_bases: set[str] = set()
+    for source in sources:
+        base = re.sub(r"\s*\([^)]*\)$", "", source.title).lower()
+        # "IPhone (1st generation)" shares its base with "IPhone"; keep only
+        # the higher-ranked one unless the answer names the full title.
+        if base in seen_bases and source.title.lower() not in lowered:
+            continue
+        if source.title.lower() in lowered or base in lowered:
+            cited.append(source)
+            seen_bases.add(base)
+    return cited or sources[:1]
+
+
+def web_search_query(
+    question: str,
+    history: list[dict[str, str]],
+    settings: Settings,
+    typhoon_api_key: str,
+    gemini_api_key: str,
+) -> list[str]:
+    """Ask an LLM for up to two English search terms; empty when the question
+    shouldn't be searched (small talk, off-topic) or no provider answers.
+    Typhoon goes first here: it's the faster, steadier of the two, and this
+    step adds latency to every off-textbook answer. All attempts share one
+    time budget: if no term arrives in time, skip the search and answer
+    without it rather than make the user wait on a hanging provider."""
+    prompt = build_conversation_prompt(question, history)
+    deadline = time.monotonic() + SEARCH_QUERY_TIME_BUDGET
+    for name, key in available_provider_candidates("typhoon", typhoon_api_key, gemini_api_key):
+        remaining = deadline - time.monotonic()
+        if remaining < 1.0:
+            logger.warning("Search-query step ran out of time; answering without web search")
+            break
+        try:
+            raw = _provider_instance(name, settings).conversation(
+                api_key=key,
+                prompt=prompt,
+                system_instruction=SEARCH_QUERY_SYSTEM_PROMPT,
+                temperature=0.0,
+                history=None,
+                timeout=remaining,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Search-query provider %s failed: %s", name, exc)
+            continue
+        line = raw.strip().splitlines()[0] if raw.strip() else ""
+        terms = [term.strip(" \"'`.") for term in line.split("|")]
+        terms = [term[:60] for term in terms if term and term.upper() != "NONE"]
+        return terms[:2]
+    return []
+
+
 # Domain synonym pairs for this textbook's terminology. TF-IDF only matches
 # shared surface words, so a question phrased with the English term, an
 # abbreviation, or a colloquial Thai term misses passages that only use the
@@ -1013,13 +1128,18 @@ class TyphoonProvider:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    def _client(self, api_key: str) -> OpenAI:
+    def _client(self, api_key: str, timeout: float | None = None) -> OpenAI:
         # Bound the call so a slow/hanging Typhoon request fails fast enough
         # for the caller (or the auto-fallback logic) to react instead of
         # hanging until the deployment platform's own gateway times out.
         # max_retries=0 so a single slow attempt can't multiply the wall-clock
         # timeout (the SDK retries failed/timed-out requests by default).
-        return OpenAI(api_key=api_key, base_url=self.settings.typhoon_base_url, timeout=25.0, max_retries=0)
+        return OpenAI(
+            api_key=api_key,
+            base_url=self.settings.typhoon_base_url,
+            timeout=timeout or 25.0,
+            max_retries=0,
+        )
 
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
         client = self._client(api_key)
@@ -1035,8 +1155,8 @@ class TyphoonProvider:
         answer = completion.choices[0].message.content or NO_ANSWER
         return answer.strip()
 
-    def conversation(self, *, api_key: str, prompt: str, system_instruction: str, temperature: float, history: list[dict[str, str]] | None) -> str:
-        client = self._client(api_key)
+    def conversation(self, *, api_key: str, prompt: str, system_instruction: str, temperature: float, history: list[dict[str, str]] | None, timeout: float | None = None) -> str:
+        client = self._client(api_key, timeout)
         messages = [{"role": "system", "content": system_instruction}]
         messages.extend(normalize_history(history))
         messages.append({"role": "user", "content": prompt})
@@ -1065,11 +1185,11 @@ class GeminiProvider:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    def _client(self, api_key: str) -> genai.Client:
+    def _client(self, api_key: str, timeout: float | None = None) -> genai.Client:
         # Short timeout, no built-in retries: a hanging/high-demand Gemini
         # response should fail fast so the caller's fallback to the next
         # provider actually happens within the request's own time budget.
-        timeout_ms = int(self.settings.gemini_timeout * 1000)
+        timeout_ms = int((timeout or self.settings.gemini_timeout) * 1000)
         return genai.Client(api_key=api_key, http_options={"timeout": timeout_ms, "retry_options": {"attempts": 1}})
 
     def grounded(self, *, api_key: str, prompt: str, temperature: float, history: list[dict[str, str]] | None) -> str:
@@ -1085,8 +1205,8 @@ class GeminiProvider:
         answer = response.text or NO_ANSWER
         return answer.strip()
 
-    def conversation(self, *, api_key: str, prompt: str, system_instruction: str, temperature: float, history: list[dict[str, str]] | None) -> str:
-        client = self._client(api_key)
+    def conversation(self, *, api_key: str, prompt: str, system_instruction: str, temperature: float, history: list[dict[str, str]] | None, timeout: float | None = None) -> str:
+        client = self._client(api_key, timeout)
         response = client.models.generate_content(
             model=self.settings.gemini_model,
             contents=_gemini_contents(history, prompt),
@@ -1235,7 +1355,29 @@ def answer_question(
     # knowledge instead of an outright refusal -- the system prompt itself
     # still refuses anything unrelated to computers, and always discloses
     # that the answer isn't from the research documents.
-    general_prompt = build_conversation_prompt(question, chat_history)
+    if not available_provider_candidates(conversation_choice, typhoon_api_key, gemini_api_key):
+        return {
+            "answer": "ตอนนี้ระบบยังไม่ได้ตั้งค่า API key ของ AI (Typhoon หรือ Gemini) จึงยังตอบคำถามนอกตำราไม่ได้ครับ กรุณาแจ้งผู้ดูแลระบบ",
+            "passages": [],
+            "images": [],
+            "elapsed": round(time.time() - started_at, 3),
+            "mode": "needs_provider",
+            "provider_used": "none",
+        }
+
+    web_sources: list[WebSource] = []
+    if settings.web_search == "wikipedia":
+        for term in web_search_query(question, chat_history, settings, typhoon_api_key, gemini_api_key):
+            for source in search_wikipedia(term):
+                if source.url not in {s.url for s in web_sources}:
+                    web_sources.append(source)
+        web_sources = web_sources[:4]
+
+    if web_sources:
+        general_prompt = build_web_prompt(question, chat_history, web_sources)
+    else:
+        general_prompt = build_conversation_prompt(question, chat_history)
+    system_instruction = general_computer_system_prompt(with_web_results=bool(web_sources))
     answer = ""
     provider_name = ""
     for candidate_name, candidate_key in available_provider_candidates(
@@ -1248,7 +1390,7 @@ def answer_question(
             answer = provider.conversation(
                 api_key=candidate_key,
                 prompt=general_prompt,
-                system_instruction=general_computer_system_prompt(),
+                system_instruction=system_instruction,
                 temperature=temperature,
                 history=chat_history,
             )
@@ -1260,20 +1402,22 @@ def answer_question(
 
     if not answer:
         return {
-            "answer": "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร กรุณาถามเกี่ยวกับเนื้อหาในตำราพื้นฐานคอมพิวเตอร์ครับ",
+            "answer": "ขออภัยครับ เชื่อมต่อ AI ไม่สำเร็จในรอบนี้ ลองส่งคำถามใหม่อีกครั้งได้เลยครับ",
             "passages": [],
             "images": [],
             "elapsed": round(time.time() - started_at, 3),
-            "mode": "no_documents",
+            "mode": "provider_error",
             "provider_used": "none",
         }
 
+    cited = cited_web_sources(answer, web_sources)
     return {
         "answer": answer,
         "passages": [],
         "images": [],
+        "web_sources": [source.to_payload() for source in cited],
         "elapsed": round(time.time() - started_at, 3),
-        "mode": "conversation",
+        "mode": "web_search" if cited else "conversation",
         "provider_used": provider_name,
     }
 

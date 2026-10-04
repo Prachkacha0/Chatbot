@@ -5,13 +5,16 @@
 ## Features
 
 - **RAG retrieval**: ค้นหาข้อมูลจาก knowledge base ด้วย TF-IDF (keyword) พร้อมขยายคำค้นด้วยพจนานุกรมคำพ้องความหมาย แล้วส่ง context ให้ LLM ตอบ พร้อมแหล่งอ้างอิง — รองรับ semantic embedding (Gemini) เป็นตัวเลือกเสริมผ่าน `SEMANTIC_WEIGHT` (ปิดไว้เป็นค่าเริ่มต้น)
-- **Dual provider**: ใช้ Typhoon สำหรับคำถามอิงเอกสาร, Gemini สำหรับการสนทนาทั่วไป (ตั้งค่าได้)
+- **Dual provider**: Typhoon เป็นตัวหลักทั้งคำถามอิงเอกสารและคำถามนอกตำรา, Gemini เป็นตัวสำรองเมื่อ Typhoon ใช้ไม่ได้ (ตั้งค่าได้)
 - **Markdown rendering**: คำตอบ render markdown ได้ (bold, bullet, code block ฯลฯ)
 - **Dark / light mode**: สลับโหมดสว่าง-มืด จำค่าไว้ใน localStorage
 - **Typing indicator**: แสดง animation ระหว่างรอคำตอบ
 - **Enter to send**: กด Enter ส่งข้อความ, Shift+Enter ขึ้นบรรทัดใหม่
-- **Sidebar สารบัญ 8 บท**: กดบทเพื่อใส่คำถามตัวอย่าง ซ่อน/แสดงได้ด้วยปุ่ม ☰ (จอคอมจำค่าไว้, มือถือเป็น drawer เลื่อนออกมา)
-- **Chat card เดียว**: ช่องพิมพ์ทรงแคปซูลขยายตามข้อความ ปุ่มส่งอยู่ในช่อง ปุ่มล้างแชทอยู่ในเมนู ⋯ กันกดพลาด
+- **ข้อมูลปัจจุบันสำหรับคำถามนอกตำรา**: ถ้าหาคำตอบในตำราไม่เจอ ระบบให้ LLM แปลงคำถามเป็นคำค้นภาษาอังกฤษ แล้วค้น Wikipedia (ฟรี ไม่ต้องมี key) ส่งบทนำของบทความให้ LLM สรุป พร้อมแสดงลิงก์แหล่งที่มา คำถามที่ตอบจากตำราไม่ค้นเว็บ ถ้าค้นไม่สำเร็จจะตอบจากความรู้ของโมเดลพร้อมคำเตือนว่าข้อมูลอาจไม่เป็นปัจจุบัน
+- **ประวัติแชท + แชทใหม่**: sidebar แสดงรายการแชทแยกตามวัน กดเปิดแชทเก่าต่อได้ ลบได้ (มีถามยืนยัน) เก็บใน localStorage ของเบราว์เซอร์เท่านั้น สูงสุด 20 แชท เกินแล้วแชทเก่าสุดถูกลบอัตโนมัติ แต่ละแชทแยก context กัน (ส่งประวัติ 8 ข้อความล่าสุดของแชทนั้นให้ LLM)
+- **Sidebar**: ซ่อน/แสดงได้ด้วยปุ่ม ☰ (จอคอมจำค่าไว้, มือถือเป็น drawer เลื่อนออกมา)
+- **สารบัญ 8 บทแบบป๊อปอัป**: ปุ่มรูปหนังสือในช่องพิมพ์ กดบทเพื่อใส่คำถามตัวอย่าง
+- **Chat card เดียว**: ช่องพิมพ์ทรงแคปซูลขยายตามข้อความ ปุ่มส่งอยู่ในช่อง ปุ่มลบแชทอยู่ในเมนู ⋯ กันกดพลาด
 - **Rate limiting**: จำกัด 10 requests/นาที ต่อ IP ที่ `/api/chat`
 - **Error state**: แสดง error bubble สีแดงแยกจากคำตอบปกติ
 - **Source citations**: แสดงแหล่งอ้างอิงพับได้ใต้คำตอบ
@@ -67,9 +70,10 @@ http://localhost:5001
 | `TYPHOON_API_KEY` | — | API key จาก opentyphoon.ai |
 | `GEMINI_API_KEY` | — | API key จาก Google AI Studio |
 | `GROUNDED_PROVIDER` | `typhoon` | provider สำหรับคำถามอิงเอกสาร (`gemini` / `typhoon` / `auto`) |
-| `CONVERSATION_PROVIDER` | `gemini` | provider สำหรับสนทนาทั่วไป (`gemini` / `typhoon` / `auto`) |
+| `CONVERSATION_PROVIDER` | `typhoon` | provider สำหรับสนทนาทั่วไป (`gemini` / `typhoon` / `auto`) |
 | `TYPHOON_MODEL` | `typhoon-v2.5-30b-a3b-instruct` | model id ของ Typhoon |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | model id ของ Gemini |
+| `WEB_SEARCH` | `wikipedia` | ค้นข้อมูลปัจจุบันสำหรับคำถามนอกตำรา (`wikipedia` / `off`) |
 | `GEMINI_TIMEOUT` | `12` | วินาทีที่รอ Gemini ก่อนสลับไปใช้ Typhoon (กันคำตอบค้างนานตอน Gemini ล่ม/คนใช้เยอะ) |
 | `TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | endpoint (OpenAI-compatible) |
 | `TOP_K` | `5` | จำนวน chunks สูงสุดที่ดึงมา |
@@ -91,7 +95,6 @@ http://localhost:5001
 |---|---|---|
 | `GET` | `/` | Chat UI |
 | `POST` | `/api/chat` | ส่งคำถาม (rate-limited: 10/min) |
-| `POST` | `/api/reload` | โหลด knowledge base ใหม่ |
 | `GET` | `/api/status` | สถานะ knowledge base |
 | `GET` | `/health` | health check |
 
@@ -107,7 +110,7 @@ http://localhost:5001
 
 ```text
 Build Command: pip install -r requirements.txt
-Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'
 Health Check Path: /health
 ```
 
