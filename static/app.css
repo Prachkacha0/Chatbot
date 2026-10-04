@@ -135,6 +135,20 @@
   --th-bg: rgba(96, 165, 250, 0.08);
 }
 
+/* Chat column width (display setting). Padding is computed from the card
+   width so the scrollbar stays at the card edge while the content centers. */
+:root {
+  --chat-width: 900px;
+}
+
+:root[data-chat-width="narrow"] {
+  --chat-width: 680px;
+}
+
+:root[data-chat-width="wide"] {
+  --chat-width: 1200px;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -168,16 +182,15 @@ button {
   height: 100vh;
   height: 100dvh;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  width: min(1380px, 100%);
-  margin: 0 auto;
+  grid-template-columns: 272px minmax(0, 1fr);
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
+.app.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app.sidebar-collapsed .sidebar {
+  display: none;
 }
 
 .brand {
@@ -186,10 +199,24 @@ button {
   align-items: center;
   gap: 8px;
   font-family: "Space Grotesk", "Noto Sans Thai", sans-serif;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  margin-right: auto;
+}
+
+.brand-compact {
+  font-size: 1.2rem;
+  margin-right: 14px;
+}
+
+/* Controls that live in the main header only while the sidebar is hidden
+   (collapsed on desktop, or a drawer on smaller screens). */
+.main-head .main-only {
+  display: none;
+}
+
+.app.sidebar-collapsed .main-head .main-only {
+  display: inline-flex;
 }
 
 .brand-star {
@@ -240,14 +267,6 @@ button {
   font-size: 1.1rem;
 }
 
-.topbar-new-chat {
-  display: none;
-}
-
-.app.sidebar-collapsed .topbar-new-chat {
-  display: inline-flex;
-}
-
 .theme-icon-dark {
   display: none;
 }
@@ -260,40 +279,26 @@ button {
   display: inline;
 }
 
-.layout {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 20px;
-  padding: 0 24px 24px;
-}
-
-.app.sidebar-collapsed .layout {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.app.sidebar-collapsed .sidebar {
-  display: none;
-}
-
-.sidebar,
-.chat-card {
-  min-height: 0;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-}
-
 /* ---------- Sidebar ---------- */
 
 .sidebar {
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 18px;
+  padding: 10px 14px 16px;
   overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 54px;
+  margin-bottom: 8px;
 }
 
 .new-chat-button {
@@ -445,7 +450,7 @@ button {
 .chapter-popover {
   position: absolute;
   bottom: calc(100% - 6px);
-  left: 20px;
+  left: max(20px, calc((100% - var(--chat-width)) / 2));
   z-index: 30;
   width: min(320px, calc(100% - 40px));
   max-height: min(520px, 70vh);
@@ -542,25 +547,25 @@ button {
   display: none;
 }
 
-/* ---------- Chat card ---------- */
+/* ---------- Main chat area ---------- */
 
-.chat-card {
+.main {
+  min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  overflow: hidden;
 }
 
-.chat-head {
+.main-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 6px;
   min-height: 64px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--line);
+  padding: 10px 16px 10px 24px;
 }
 
 .chat-title {
+  flex: 1;
   min-width: 0;
   margin: 0;
   font-size: 0.95rem;
@@ -579,7 +584,10 @@ button {
 
 .chat-log {
   min-height: 0;
-  padding: 24px;
+  padding: 24px max(24px, calc((100% - var(--chat-width)) / 2));
+  /* Messages fade out under the header instead of being cut off sharply. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 28px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -588,7 +596,72 @@ button {
 
 .composer {
   position: relative;
-  padding: 12px 20px 20px;
+  padding: 12px max(20px, calc((100% - var(--chat-width)) / 2)) 20px;
+}
+
+/* ---------- Display settings ---------- */
+
+.settings {
+  position: relative;
+}
+
+.settings-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 70;
+  width: 260px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.settings-popover[hidden] {
+  display: none;
+}
+
+.settings-heading {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.settings-hint {
+  margin: 2px 0 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--ghost-bg);
+}
+
+.segmented button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.segmented button[aria-checked="true"] {
+  background: var(--surface-strong);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.segmented button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--input-focus-shadow), 0 0 0 1px var(--input-focus-border);
 }
 
 .composer-pill {
@@ -663,7 +736,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: min(92%, 820px);
+  max-width: 92%;
   animation: rise 180ms ease;
 }
 
@@ -1006,8 +1079,8 @@ button {
 /* ---------- Tablet / phone: sidebar becomes a slide-in drawer ---------- */
 
 @media (max-width: 1024px) {
-  .layout,
-  .app.sidebar-collapsed .layout {
+  .app,
+  .app.sidebar-collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1027,7 +1100,7 @@ button {
     transition: transform 200ms ease, visibility 200ms;
   }
 
-  .topbar-new-chat {
+  .main-head .main-only {
     display: inline-flex;
   }
 
@@ -1046,16 +1119,12 @@ button {
 }
 
 @media (max-width: 640px) {
-  .topbar {
+  .settings {
+    display: none;
+  }
+
+  .main-head {
     padding: 8px 12px;
-  }
-
-  .layout {
-    padding: 0 10px 10px;
-  }
-
-  .chat-head {
-    padding-left: 16px;
   }
 
   .chat-log {

@@ -1,5 +1,7 @@
 const THEME_STORAGE_KEY = "polaris-theme";
 const SIDEBAR_STORAGE_KEY = "polaris-sidebar-collapsed";
+const CHAT_WIDTH_STORAGE_KEY = "polaris-chat-width";
+const CHAT_WIDTHS = ["narrow", "medium", "wide"];
 const CHATS_STORAGE_KEY = "polaris-chats";
 const ACTIVE_CHAT_STORAGE_KEY = "polaris-active-chat";
 const MAX_CHATS = 20;
@@ -19,7 +21,7 @@ const imageLightboxImg = imageLightbox.querySelector(".image-lightbox-img");
 const imageLightboxCaption = imageLightbox.querySelector(".image-lightbox-caption");
 const imageLightboxClose = imageLightbox.querySelector(".image-lightbox-close");
 const app = document.querySelector(".app");
-const sidebarToggleButton = document.querySelector("#sidebar-toggle");
+const sidebarToggleButtons = document.querySelectorAll("[data-sidebar-toggle]");
 const sidebarBackdrop = document.querySelector("#sidebar-backdrop");
 const chatTitle = document.querySelector("#chat-title");
 const chatHistoryNav = document.querySelector("#chat-history");
@@ -29,6 +31,9 @@ const newChatButtons = [
 ];
 const chapterButton = document.querySelector("#chapter-btn");
 const chapterPopover = document.querySelector("#chapter-popover");
+const settingsButton = document.querySelector("#settings-btn");
+const settingsPopover = document.querySelector("#settings-popover");
+const chatWidthOptions = document.querySelectorAll(".segmented [data-width]");
 const mobileQuery = window.matchMedia("(max-width: 1024px)");
 
 function readStorage(key) {
@@ -78,6 +83,25 @@ themeToggleButton.addEventListener("click", () => {
 
 applyTheme(readStorage(THEME_STORAGE_KEY) || "system");
 
+/* ---------- Chat width ---------- */
+
+function applyChatWidth(width) {
+  const value = CHAT_WIDTHS.includes(width) ? width : "medium";
+  document.documentElement.dataset.chatWidth = value;
+  chatWidthOptions.forEach((option) => {
+    option.setAttribute("aria-checked", String(option.dataset.width === value));
+  });
+}
+
+chatWidthOptions.forEach((option) => {
+  option.addEventListener("click", () => {
+    writeStorage(CHAT_WIDTH_STORAGE_KEY, option.dataset.width);
+    applyChatWidth(option.dataset.width);
+  });
+});
+
+applyChatWidth(readStorage(CHAT_WIDTH_STORAGE_KEY));
+
 /* ---------- Sidebar ---------- */
 
 function isSidebarVisible() {
@@ -88,7 +112,9 @@ function isSidebarVisible() {
 
 function syncSidebarState() {
   sidebarBackdrop.hidden = !(mobileQuery.matches && app.classList.contains("sidebar-open"));
-  sidebarToggleButton.setAttribute("aria-expanded", String(isSidebarVisible()));
+  sidebarToggleButtons.forEach((button) => {
+    button.setAttribute("aria-expanded", String(isSidebarVisible()));
+  });
 }
 
 function closeMobileSidebar() {
@@ -96,7 +122,7 @@ function closeMobileSidebar() {
   syncSidebarState();
 }
 
-sidebarToggleButton.addEventListener("click", () => {
+function toggleSidebar() {
   if (mobileQuery.matches) {
     app.classList.toggle("sidebar-open");
   } else {
@@ -104,7 +130,9 @@ sidebarToggleButton.addEventListener("click", () => {
     writeStorage(SIDEBAR_STORAGE_KEY, collapsed ? "1" : "0");
   }
   syncSidebarState();
-});
+}
+
+sidebarToggleButtons.forEach((button) => button.addEventListener("click", toggleSidebar));
 
 sidebarBackdrop.addEventListener("click", closeMobileSidebar);
 mobileQuery.addEventListener("change", () => {
@@ -115,20 +143,33 @@ mobileQuery.addEventListener("change", () => {
 app.classList.toggle("sidebar-collapsed", readStorage(SIDEBAR_STORAGE_KEY) === "1");
 syncSidebarState();
 
-/* ---------- Chapter popup ---------- */
+/* ---------- Chapter and settings popups ---------- */
 
 function setChapterPopoverOpen(open) {
   chapterPopover.hidden = !open;
   chapterButton.setAttribute("aria-expanded", String(open));
 }
 
+function setSettingsOpen(open) {
+  settingsPopover.hidden = !open;
+  settingsButton.setAttribute("aria-expanded", String(open));
+}
+
 chapterButton.addEventListener("click", (event) => {
   event.stopPropagation();
+  setSettingsOpen(false);
   setChapterPopoverOpen(chapterPopover.hidden);
+});
+
+settingsButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setChapterPopoverOpen(false);
+  setSettingsOpen(settingsPopover.hidden);
 });
 
 document.addEventListener("click", (event) => {
   if (!chapterPopover.hidden && !chapterPopover.contains(event.target)) setChapterPopoverOpen(false);
+  if (!settingsPopover.hidden && !settingsPopover.contains(event.target)) setSettingsOpen(false);
 });
 
 document.addEventListener("keydown", (event) => {
@@ -136,6 +177,10 @@ document.addEventListener("keydown", (event) => {
   if (!imageLightbox.hidden) {
     closeImageLightbox();
     return;
+  }
+  if (!settingsPopover.hidden) {
+    setSettingsOpen(false);
+    settingsButton.focus();
   }
   if (!chapterPopover.hidden) {
     setChapterPopoverOpen(false);
