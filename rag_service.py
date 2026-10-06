@@ -226,7 +226,10 @@ class Settings:
     web_search: str = field(default_factory=lambda: os.getenv("WEB_SEARCH", "wikipedia").lower())
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
-    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.10))
+    # 0.06, not higher: list-style textbook pages (e.g. ตำราหน้า ๕๑–๕๖) pack many
+    # topics per chunk, so even the correct page scores ~0.06-0.10. Loosely
+    # related hits are still filtered by the grounded prompt's refusal rule.
+    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.06))
     semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.0))
     exact_qa_threshold: float = field(default_factory=lambda: _env_float("EXACT_QA_THRESHOLD", 0.85))
     max_images_per_answer: int = field(default_factory=lambda: max(0, _env_int("MAX_IMAGES_PER_ANSWER", 2)))
@@ -825,15 +828,60 @@ def build_context(passages: list[Passage]) -> str:
     return "\n\n---\n\n".join(blocks)
 
 
-def local_conversation_fallback(question: str, kb_files: list[str]) -> str:
+def _social_pattern(token: str) -> re.Pattern[str]:
+    # English signals must be whole words ("hi" must not fire on "while",
+    # "graphic", "machine"); Thai has no word spaces, so Thai signals match as
+    # substrings except where they sit inside a longer word ("บาย" in "อธิบาย").
+    if token.isascii():
+        return re.compile(rf"(?<![a-z]){re.escape(token)}(?![a-z])")
+    if token == "บาย":
+        return re.compile(r"(?<!อธิ)บาย")
+    return re.compile(re.escape(token))
+
+
+_SOCIAL_PATTERNS = {
+    group: tuple(_social_pattern(token) for token in tokens)
+    for group, tokens in {
+        "bye": BYE_WORDS,
+        "thanks": THANKS_WORDS,
+        "greeting": GREETING_WORDS,
+        "social": SOCIAL_PHRASES,
+    }.items()
+}
+_POLITE_FILLER = re.compile(
+    r"ครับ|ค่ะ|คะ|คับ|จ้า|จ้ะ|นะ|มากๆ|มาก|เลย|\byou\b|\bthere\b|\bso\b|\bmuch\b|\ba lot\b"
+    r"|[\s.,!?~'\"()\-_]+"
+)
+# A message only counts as pure small talk when, after removing the social
+# signal and polite filler, at most this many characters remain. Otherwise it
+# carries a real question ("สวัสดีครับ RAM คืออะไร") and goes to retrieval.
+_SOCIAL_LEFTOVER_LIMIT = 4
+
+
+def _social_group(question: str) -> str | None:
     lowered = question.strip().lower()
-    if any(token in lowered for token in BYE_WORDS):
+    if not lowered:
+        return None
+    for group, patterns in _SOCIAL_PATTERNS.items():
+        if any(pattern.search(lowered) for pattern in patterns):
+            leftover = lowered
+            for pats in _SOCIAL_PATTERNS.values():
+                for pattern in pats:
+                    leftover = pattern.sub("", leftover)
+            leftover = _POLITE_FILLER.sub("", leftover)
+            return group if len(leftover) <= _SOCIAL_LEFTOVER_LIMIT else None
+    return None
+
+
+def local_conversation_fallback(question: str, kb_files: list[str]) -> str:
+    group = _social_group(question)
+    if group == "bye":
         return "ได้เลยครับ ไว้คุยกันใหม่ ถ้ามีคำถามเรื่องพื้นฐานคอมพิวเตอร์ส่งมาได้เสมอครับ"
-    if any(token in lowered for token in THANKS_WORDS):
+    if group == "thanks":
         return "ยินดีครับ ถ้ามีประเด็นไหนอยากให้ช่วยต่อ ถามมาได้เลย"
-    if any(token in lowered for token in GREETING_WORDS):
+    if group == "greeting":
         return "สวัสดีครับ ผมคือ Polaris ถามเรื่องพื้นฐานคอมพิวเตอร์ได้เลยครับ"
-    if any(token in lowered for token in SOCIAL_PHRASES):
+    if group == "social":
         return (
             "ผมคือ Polaris ครับ ผู้ช่วยตอบคำถามเรื่องพื้นฐานคอมพิวเตอร์ "
             "โดยค้นหาจากตำราภาษาไทย 8 บท แล้วตอบพร้อมอ้างอิงเลขหน้าและรูปประกอบ"
@@ -847,11 +895,7 @@ def local_conversation_fallback(question: str, kb_files: list[str]) -> str:
 
 
 def is_social_message(question: str) -> bool:
-    lowered = question.strip().lower()
-    if not lowered:
-        return False
-    signals = GREETING_WORDS + THANKS_WORDS + BYE_WORDS + SOCIAL_PHRASES
-    return any(token in lowered for token in signals)
+    return _social_group(question) is not None
 
 
 def build_grounded_prompt(question: str, passages: list[Passage], history: list[dict[str, str]] | None) -> str:

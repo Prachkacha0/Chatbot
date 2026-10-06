@@ -20,7 +20,7 @@ services:
       - key: TOP_K
         value: "5"
       - key: MIN_RELEVANCE
-        value: "0.10"
+        value: "0.06"
       - key: TYPHOON_BASE_URL
         value: https://api.opentyphoon.ai/v1
       - key: TYPHOON_API_KEY

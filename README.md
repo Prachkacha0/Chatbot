@@ -78,7 +78,7 @@ http://localhost:5001
 | `GEMINI_TIMEOUT` | `12` | วินาทีที่รอ Gemini ก่อนสลับไปใช้ Typhoon (กันคำตอบค้างนานตอน Gemini ล่ม/คนใช้เยอะ) |
 | `TYPHOON_BASE_URL` | `https://api.opentyphoon.ai/v1` | endpoint (OpenAI-compatible) |
 | `TOP_K` | `5` | จำนวน chunks สูงสุดที่ดึงมา |
-| `MIN_RELEVANCE` | `0.10` | คะแนนรวม (hybrid) ขั้นต่ำ |
+| `MIN_RELEVANCE` | `0.06` | คะแนนรวม (hybrid) ขั้นต่ำ — ตั้งต่ำเพราะหน้าตำราที่เขียนเป็นหัวข้อสั้นๆ หลายเรื่อง (เช่น ตำราหน้า ๕๑–๕๖) ได้คะแนนแค่ราว 0.06–0.10 แม้เป็นหน้าที่ถูก ส่วนเนื้อหาที่ไม่ตรงคำถาม prompt ของคำตอบอิงตำราจะปฏิเสธเอง |
 | `MAX_IMAGES_PER_ANSWER` | `2` | จำนวนรูปจากตำราสูงสุดที่แนบกับคำตอบหนึ่งข้อ (`0` = ไม่แนบรูป) |
 | `EMBEDDING_MODEL` | `gemini-embedding-001` | model id สำหรับ semantic embedding |
 | `SEMANTIC_WEIGHT` | `0` | น้ำหนักของ semantic score เทียบกับ TF-IDF (0 = keyword-only, 1 = semantic-only) — ปิดไว้เป็นค่าเริ่มต้น ถ้าเปิดต้องปรับ `MIN_RELEVANCE` ใหม่ด้วย เพราะคะแนน hybrid อยู่คนละสเกลกับ TF-IDF |
