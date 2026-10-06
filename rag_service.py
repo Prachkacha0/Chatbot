@@ -36,6 +36,17 @@ NO_ANSWER = (
     "ผมยังไม่พบข้อมูลมากพอที่จะตอบคำถามนี้ได้อย่างชัดเจน"
 )
 
+CREATOR_ANSWER = (
+    "ผู้สร้างของผมคือสภาศักดิ์สิทธิ์แห่งครุศาสตร์คอมพิวเตอร์ มจพ.\n"
+    "นายวีรภัทร ครุนิติวัฒน์\n"
+    "นายธนพล อวยพร\n"
+    "นายปรัชคฌา น้อยศรี\n"
+    "นายอภินัทธ์ ลัดลอย\n"
+    "นายธีระวัฒน์ นุ่นงาม"
+)
+# Served only via is_creator_question, never through the LLM prompts: a prompt
+# rule made the model also answer this to "ใครคือคนสร้างคอมพิวเตอร์".
+
 GROUNDING_SYSTEM_PROMPT = """You are Polaris, a research assistant that answers questions
 about basic computer knowledge strictly from a Thai computer textbook, using
 only the provided document context.
@@ -898,6 +909,30 @@ def is_social_message(question: str) -> bool:
     return _social_group(question) is not None
 
 
+# "คุณ" is also a prefix of ordinary words (คุณสมบัติ, คุณลักษณะ ...), and the
+# bot reference must sit right next to the verb so textbook questions such as
+# "ใครสร้างคอมพิวเตอร์เครื่องแรก" or "ช่วยบอกหน่อยว่าใครสร้าง ENIAC" don't match.
+_BOT = r"(?:คุณ(?!สมบัติ|ภาพ|ลักษณะ|ค่า|ประโยชน์|ครู)|polaris|โพลาริส|แชทบอท|บอท|เธอ)"
+_MAKE = r"(?:สร้าง|พัฒนา|ออกแบบ|จัดทำ|ทำ)"
+_CREATOR_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        rf"{_MAKE}\s*(?:ตัว)?{_BOT}",  # ใครสร้างคุณ, คนที่พัฒนา Polaris
+        rf"{_BOT}\s*(?:ถูก|ได้รับการ)?\s*{_MAKE}\s*(?:ขึ้น(?:มา)?)?\s*(?:โดย|จาก)",  # คุณถูกสร้างโดยใคร
+        rf"ผู้{_MAKE}\s*(?:ของ)?\s*{_BOT}",  # ผู้สร้างของคุณ
+        rf"{_BOT}\s*(?:มี)?ใคร\s*เป็น\s*(?:คน|ผู้){_MAKE}",  # Polaris มีใครเป็นผู้พัฒนา
+        r"\bwho\b.{0,20}\b(?:made|created?|built|developed|designed)\b.{0,10}\b(?:you|polaris)\b",
+        r"\b(?:your|polaris'?s?)\s+(?:creators?|developers?|makers?|authors?)\b",
+    )
+)
+_CREATOR_WHO = re.compile(r"ใคร|ผู้|คน|ทีม|\bwho\b|creator|developer|maker|author")
+
+
+def is_creator_question(question: str) -> bool:
+    lowered = question.strip().lower()
+    return bool(_CREATOR_WHO.search(lowered)) and any(p.search(lowered) for p in _CREATOR_PATTERNS)
+
+
 def build_grounded_prompt(question: str, passages: list[Passage], history: list[dict[str, str]] | None) -> str:
     return (
         "RECENT CONVERSATION:\n"
@@ -1305,6 +1340,15 @@ def answer_question(
     grounded_choice = normalize_provider_choice(grounded_provider, settings.default_grounded_provider)
     conversation_choice = normalize_provider_choice(conversation_provider, settings.default_conversation_provider)
     kb_files = [item.source for item in kb.current_index().files]
+    if is_creator_question(question):
+        return {
+            "answer": CREATOR_ANSWER,
+            "passages": [],
+            "images": [],
+            "elapsed": round(time.time() - started_at, 3),
+            "mode": "assistant_fallback",
+            "provider_used": "local",
+        }
     social_only = is_social_message(question)
     if social_only:
         return {
