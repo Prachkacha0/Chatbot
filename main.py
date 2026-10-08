@@ -120,15 +120,15 @@ def chat(request: Request, payload: ChatRequest) -> dict:
             grounded_provider=payload.grounded_provider,
             conversation_provider=payload.conversation_provider,
         )
+    # Error details go to the server log only; users get a plain Thai message,
+    # since provider exceptions can carry internal request details.
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=401, detail=f"Typhoon authentication failed: {exc}") from exc
-    except APIError as exc:
-        raise HTTPException(status_code=502, detail=f"Typhoon API error: {exc}") from exc
-    except gemini_errors.APIError as exc:
-        raise HTTPException(status_code=502, detail=f"Gemini API error: {exc}") from exc
-    except Exception as exc:  # noqa: BLE001
+        logger.warning("Rejected chat request: %s", exc)
+        raise HTTPException(status_code=400, detail="คำถามนี้ส่งไม่ได้ครับ ลองพิมพ์ใหม่อีกครั้ง") from exc
+    except (AuthenticationError, APIError, gemini_errors.APIError) as exc:
+        logger.exception("AI provider failure")
+        raise HTTPException(status_code=502, detail="เชื่อมต่อ AI ไม่สำเร็จในรอบนี้ ลองส่งคำถามใหม่อีกครั้งครับ") from exc
+    except Exception:  # noqa: BLE001
         logger.exception("Unexpected chat failure")
         return {
             "answer": "ขออภัยครับ ระบบมีปัญหาชั่วคราว ลองส่งคำถามใหม่ได้เลย",
@@ -137,7 +137,6 @@ def chat(request: Request, payload: ChatRequest) -> dict:
             "elapsed": 0.0,
             "mode": "server_error",
             "provider_used": "local",
-            "error": str(exc),
         }
 
     return result

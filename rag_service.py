@@ -136,6 +136,8 @@ rule 7:
 - Copy model names, numbers and dates exactly as the results state them;
   never change a year or month from what the results say.
 - Cite the article you used, e.g. (Wikipedia: iPhone).
+- Do not add any sentence about your own knowledge or its date (such as
+  "ข้อมูลที่ผมมีล่าสุดคือ ..."); the results are from today.
 - If the results don't actually answer the question, ignore them and follow
   rules 1-7 as written.
 """
@@ -578,6 +580,31 @@ def _parse_page_range(page_range: str) -> tuple[int, int] | None:
         return int(parts[0]), int(parts[1])
     except ValueError:
         return None
+
+
+_THAI_TO_ARABIC_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
+_PAGE_CITATION = re.compile(r"\(ตำราหน้า\s*([๐-๙0-9]+(?:\s*-\s*[๐-๙0-9]+)?)\)")
+
+
+def fix_citations(answer: str, passages: list[Passage]) -> str:
+    """The model sometimes cites a page it was never given -- e.g. (ตำราหน้า ๕๕)
+    when the passage was ตำราหน้า ๕๔, misreading a nearby printed page number.
+    Point such a citation at the retrieved page it most plausibly meant: the
+    only retrieved page, or the only one within a page of it. Citations that
+    are valid, or too ambiguous to fix, are left alone."""
+    pages = [(p, bounds) for p in passages if (bounds := _parse_page_range(p.page_label))]
+    if not pages:
+        return answer
+
+    def replace(match: re.Match[str]) -> str:
+        cited = _parse_page_range(re.sub(r"\s", "", match.group(1)).translate(_THAI_TO_ARABIC_DIGITS))
+        if cited is None or any(lo <= cited[0] and cited[1] <= hi for _, (lo, hi) in pages):
+            return match.group(0)
+        near = [p for p, (lo, hi) in pages if lo - 1 <= cited[0] and cited[1] <= hi + 1]
+        candidates = near if len(near) == 1 else [p for p, _ in pages] if len(pages) == 1 else []
+        return f"({candidates[0].citation})" if candidates else match.group(0)
+
+    return _PAGE_CITATION.sub(replace, answer)
 
 
 # Descriptive or very frequent words in this textbook. On their own they don't
@@ -1443,7 +1470,7 @@ def answer_question(
                 passages, question, kb.image_entries, max_images=settings.max_images_per_answer
             )
             return {
-                "answer": answer,
+                "answer": fix_citations(answer, passages),
                 "passages": [passage.to_payload() for passage in passages],
                 "images": images,
                 "elapsed": round(time.time() - started_at, 3),

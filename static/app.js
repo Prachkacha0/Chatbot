@@ -396,7 +396,7 @@ function appendMessage(role, text, options = {}) {
     marked.setOptions({ breaks: true, gfm: true });
     bubble.innerHTML = DOMPurify.sanitize(marked.parse(text));
   } else {
-    bubble.innerHTML = `<p>${escapeHtml(text)}</p>`;
+    bubble.innerHTML = `<p>${escapeHtml(text).replaceAll("\n", "<br>")}</p>`;
   }
 
   if (options.meta) {
@@ -542,23 +542,31 @@ function describeMode(mode) {
   if (mode === "grounded") return "ตอบจากเอกสาร";
   if (mode === "conversation") return "ตอบแบบ AI";
   if (mode === "web_search") return "ค้นจากเว็บ";
-  if (mode === "assistant_fallback") return "โหมด fallback";
+  if (mode === "assistant_fallback") return "ตอบทันที";
   if (mode === "needs_provider") return "ต้องมี API key";
-  if (mode === "provider_error") return "provider error";
+  if (mode === "provider_error") return "เชื่อมต่อ AI ไม่สำเร็จ";
+  if (mode === "server_error") return "ระบบขัดข้อง";
   if (mode === "no_documents") return "ยังไม่มีเอกสาร";
   return mode || "response";
 }
 
 async function postJson(url, payload = {}) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองส่งใหม่อีกครั้งครับ");
+  }
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.detail || "Request failed.");
+    // FastAPI validation errors put a list in `detail`; only show our own strings.
+    const detail = typeof data.detail === "string" ? data.detail : "";
+    throw new Error(detail || `ระบบตอบกลับผิดพลาด (รหัส ${response.status}) ลองส่งใหม่อีกครั้งครับ`);
   }
   return data;
 }
@@ -597,7 +605,7 @@ chatForm.addEventListener("submit", async (event) => {
     const result = await postJson("/api/chat", { message, history });
     const provider = result.provider_used || "";
     const modeLabel = describeMode(result.mode);
-    const meta = provider
+    const meta = provider && !["local", "none"].includes(provider)
       ? `${modeLabel} · ${provider} · ${result.elapsed.toFixed(2)}s`
       : `${modeLabel} · ${result.elapsed.toFixed(2)}s`;
     const reply = {
@@ -623,8 +631,25 @@ chatForm.addEventListener("submit", async (event) => {
     }
   } catch (error) {
     typingNode.remove();
-    if (state.activeId === chatId) {
-      appendMessage("assistant", error.message, { meta: "request failed", isError: true });
+    // Drop the unanswered question from the saved chat so history and
+    // context stay question/answer pairs, and hand the text back for a resend.
+    const target = findChat(chatId);
+    if (target) {
+      const last = target.messages[target.messages.length - 1];
+      if (last && last.role === "user" && last.content === message) target.messages.pop();
+      if (!target.messages.length) {
+        state.chats = state.chats.filter((item) => item.id !== chatId);
+        if (state.activeId === chatId) state.activeId = null;
+      }
+      persistChats();
+      renderChatList();
+    }
+    if (state.activeId === chatId || state.activeId === null) {
+      appendMessage("assistant", error.message, { meta: "ส่งไม่สำเร็จ", isError: true });
+    }
+    if (!messageInput.value) {
+      messageInput.value = message;
+      autoGrowInput();
     }
   } finally {
     setBusy(false);
