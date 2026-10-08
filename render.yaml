@@ -1,6 +1,8 @@
 services:
   - type: web
-    name: polaris
+    # Must match the live Render service's name: the Blueprint matches services
+    # by name, and a different name makes it create a second service.
+    name: chatbot-research
     plan: free
     runtime: python
     region: singapore
