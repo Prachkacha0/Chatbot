@@ -832,6 +832,18 @@ def history_as_text(history: list[dict[str, str]] | None) -> str:
     return "\n".join(lines)
 
 
+def retrieval_queries(question: str, history: list[dict[str, str]]) -> list[str]:
+    """Queries to try against the textbook, in order. A follow-up such as
+    "อธิบายเพิ่มอีกหน่อย" or "มันต่างกันยังไง" has no keywords of its own, so
+    when the question alone retrieves nothing, retry with the previous user
+    question prepended."""
+    queries = [question]
+    previous = next((turn["content"] for turn in reversed(history) if turn["role"] == "user"), "")
+    if previous and previous.strip() != question.strip():
+        queries.append(f"{previous} {question}")
+    return queries
+
+
 def build_context(passages: list[Passage]) -> str:
     blocks = []
     for index, passage in enumerate(passages, start=1):
@@ -1373,9 +1385,10 @@ def answer_question(
             "provider_used": "dataset",
         }
 
-    passages = kb.retrieve(question, top_k=top_k)
-
-    if passages:
+    for retrieval_query in retrieval_queries(question, chat_history):
+        passages = kb.retrieve(retrieval_query, top_k=top_k)
+        if not passages:
+            continue
         prompt = build_grounded_prompt(question, passages, chat_history)
         answer = ""
         provider_name = ""
@@ -1437,6 +1450,11 @@ def answer_question(
                 "mode": "grounded",
                 "provider_used": provider_name,
             }
+        # The model judged these passages off-topic; trust that and don't
+        # retry with the previous question, which would pull the earlier
+        # topic back in (e.g. a buying-advice follow-up landing on a
+        # textbook page about computer types).
+        break
 
     # No usable passages in the dataset (either none retrieved, or the
     # grounded provider itself declined). Fall back to general computer
