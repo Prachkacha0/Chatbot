@@ -698,6 +698,8 @@ def _parse_page_range(page_range: str) -> tuple[int, int] | None:
 
 _THAI_TO_ARABIC_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
 _PAGE_CITATION = re.compile(r"\(ตำราหน้า\s*([๐-๙0-9]+(?:\s*-\s*[๐-๙0-9]+)?)\)")
+_CITATION_PARENS = re.compile(r"\([^()]*ตำรา[^()]*\)")
+_SOURCE_TAG = re.compile(r"แหล่งที่\s*\d+\s*\|\s*|\s*\|\s*แหล่งที่\s*\d+")
 
 
 def fix_citations(answer: str, passages: list[Passage]) -> str:
@@ -705,7 +707,11 @@ def fix_citations(answer: str, passages: list[Passage]) -> str:
     when the passage was ตำราหน้า ๕๔, misreading a nearby printed page number.
     Point such a citation at the retrieved page it most plausibly meant: the
     only retrieved page, or the only one within a page of it. Citations that
-    are valid, or too ambiguous to fix, are left alone."""
+    are valid, or too ambiguous to fix, are left alone.
+
+    It also sometimes copies the context's "[แหล่งที่ 1 | ตำราหน้า ...]"
+    header into a citation; the source number means nothing to the reader."""
+    answer = _CITATION_PARENS.sub(lambda m: _SOURCE_TAG.sub("", m.group(0)), answer)
     pages = [(p, bounds) for p in passages if (bounds := _parse_page_range(p.page_label))]
     if not pages:
         return answer
@@ -1330,55 +1336,76 @@ def expand_query_with_synonyms(query: str) -> str:
 # appear on more pages and get nothing.
 RARE_TERM_MAX_PAGES = 3
 RARE_TERM_BONUS = 0.05
+RARE_TERM_MAX_CANDIDATES = 40
 _ASCII_RUN = re.compile(r"[a-z][a-z0-9]*(?:[ \-]+[a-z][a-z0-9]*)*")
 
 
 RARE_PHRASE_MIN_CHARS = 10
 RARE_PHRASE_MAX_CHARS = 40
+# Only the start of a message is searched: questions are short, and every
+# position costs a few scans of the whole book (a 4,000-character paste took
+# 39 s of CPU before this cap).
+RARE_PHRASE_QUERY_CHARS = 150
 
 
-def _rare_phrase_hits(query: str, lowered_texts: list[str], pages: list[str]) -> list[np.ndarray]:
+def _rare_phrase_hits(question: str, lowered_texts: list[str], pages: list[str]) -> list[np.ndarray]:
     """Thai has no spaces to find words by, so look for the longest stretches
     of the question (10-40 characters) that appear verbatim in the book, and
     count those that appear on at most RARE_TERM_MAX_PAGES pages. Catches a
     sub-heading quoted in the question: "Algorithm ที่ดี" heads one list on
     page ๕๒, a chunk that otherwise scores low because it covers three topics."""
-    text = " ".join(query.lower().split())
+    text = " ".join(question.lower().split())[:RARE_PHRASE_QUERY_CHARS]
     corpus = "\x00".join(lowered_texts)
-    taken: list[tuple[int, int]] = []
+    spans: list[tuple[int, int]] = []
+    for start in range(len(text) - RARE_PHRASE_MIN_CHARS + 1):
+        if text[start : start + RARE_PHRASE_MIN_CHARS] not in corpus:
+            continue
+        # Every prefix of a phrase found in the book is in the book too, so
+        # binary-search the longest one starting here.
+        lo, hi = RARE_PHRASE_MIN_CHARS, min(RARE_PHRASE_MAX_CHARS, len(text) - start)
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if text[start : start + mid] in corpus:
+                lo = mid
+            else:
+                hi = mid - 1
+        spans.append((start, start + lo))
+    # Parts of a longer phrase found in the book say nothing new.
+    maximal = {
+        span for span in spans
+        if not any(other != span and other[0] <= span[0] and span[1] <= other[1] for other in spans)
+    }
     hits: list[np.ndarray] = []
-    for length in range(min(len(text), RARE_PHRASE_MAX_CHARS), RARE_PHRASE_MIN_CHARS - 1, -1):
-        for start in range(len(text) - length + 1):
-            end = start + length
-            if any(lo <= start and end <= hi for lo, hi in taken):
-                continue
-            phrase = text[start:end]
-            if phrase != phrase.strip() or phrase not in corpus:
-                continue
-            # A longer phrase was found here; its parts say nothing new.
-            taken.append((start, end))
-            found = np.array([phrase in chunk for chunk in lowered_texts])
-            if len({pages[i] for i in np.flatnonzero(found)}) <= RARE_TERM_MAX_PAGES:
-                hits.append(found)
+    for start, end in sorted(maximal):
+        phrase = text[start:end].strip()
+        if len(phrase) < RARE_PHRASE_MIN_CHARS:
+            continue
+        found = np.array([phrase in chunk for chunk in lowered_texts])
+        if len({pages[i] for i in np.flatnonzero(found)}) <= RARE_TERM_MAX_PAGES:
+            hits.append(found)
     return hits
 
 
-def rare_term_bonus(query: str, lowered_texts: list[str], pages: list[str]) -> np.ndarray:
-    """`pages` names each chunk's page(s); rarity counts distinct pages, since
-    one page can be split over several chunks."""
-    candidates: set[str] = set()
+def rare_term_bonus(query: str, question: str, lowered_texts: list[str], pages: list[str]) -> np.ndarray:
+    """`query` is the synonym-expanded question, searched for English terms;
+    `question` is the user's own text, searched for rare phrases. `pages`
+    names each chunk's page(s); rarity counts distinct pages, since one page
+    can be split over several chunks."""
+    candidates: dict[str, None] = {}  # ordered set
     for run in _ASCII_RUN.findall(query.lower()):
         words = re.split(r"[ \-]+", run)
-        candidates.update(word for word in words if len(word) >= 3)
-        candidates.update(f"{a} {b}" for a, b in zip(words, words[1:]))
+        candidates.update(dict.fromkeys(word for word in words if len(word) >= 3))
+        candidates.update(dict.fromkeys(f"{a} {b}" for a, b in zip(words, words[1:])))
 
     hits = []
-    for term in candidates:
+    # Each term is a regex scan of every chunk; a long English paste would
+    # otherwise mean thousands of them.
+    for term in list(candidates)[:RARE_TERM_MAX_CANDIDATES]:
         pattern = _ascii_term_pattern(term)
         found = np.array([bool(pattern.search(text)) for text in lowered_texts])
         if 0 < len({pages[i] for i in np.flatnonzero(found)}) <= RARE_TERM_MAX_PAGES:
             hits.append(found)
-    hits.extend(_rare_phrase_hits(query, lowered_texts, pages))
+    hits.extend(_rare_phrase_hits(question, lowered_texts, pages))
     if not hits:
         return np.zeros(len(lowered_texts))
     return RARE_TERM_BONUS * np.mean(hits, axis=0)
@@ -1490,6 +1517,7 @@ class KnowledgeBase:
             scores = keyword_scores
         scores = scores + rare_term_bonus(
             expanded_query,
+            query,
             [chunk["text"].lower() for chunk in index.chunks],
             [chunk.get("page_range", str(i)) for i, chunk in enumerate(index.chunks)],
         )
