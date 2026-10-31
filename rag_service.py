@@ -230,6 +230,20 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
+def _default_min_relevance() -> float:
+    """Scores depend on chunk size, so each chunk mode has its own threshold.
+    Whole pages: 0.06, because list-style pages (ตำราหน้า ๕๑–๕๖) pack many
+    topics and even the correct page scores ~0.06-0.10. Section chunks score
+    higher across the board; with 0.07 all 56 in-book test questions find
+    their page (the weakest scores 0.09) while about half of the off-topic
+    ones get through, which the grounded prompt's refusal rule then filters.
+    A separate variable means the 0.06 already set for MIN_RELEVANCE on
+    Render doesn't override it."""
+    if os.getenv("CHUNK_MODE", "sections").lower() == "pages":
+        return _env_float("MIN_RELEVANCE", 0.06)
+    return _env_float("MIN_RELEVANCE_SECTIONS", 0.07)
+
+
 @dataclass(frozen=True)
 class Settings:
     typhoon_base_url: str = field(default_factory=lambda: os.getenv("TYPHOON_BASE_URL", "https://api.opentyphoon.ai/v1"))
@@ -239,10 +253,10 @@ class Settings:
     web_search: str = field(default_factory=lambda: os.getenv("WEB_SEARCH", "wikipedia").lower())
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"))
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
-    # 0.06, not higher: list-style textbook pages (e.g. ตำราหน้า ๕๑–๕๖) pack many
-    # topics per chunk, so even the correct page scores ~0.06-0.10. Loosely
-    # related hits are still filtered by the grounded prompt's refusal rule.
-    min_relevance: float = field(default_factory=lambda: _env_float("MIN_RELEVANCE", 0.06))
+    # "sections" (chunk_pdf_sections) or "pages" (chunk_pdf_pages, the
+    # pre-2026-10-31 behaviour; set MIN_RELEVANCE back to 0.06 with it).
+    chunk_mode: str = field(default_factory=lambda: os.getenv("CHUNK_MODE", "sections").lower())
+    min_relevance: float = field(default_factory=lambda: _default_min_relevance())
     semantic_weight: float = field(default_factory=lambda: _env_float("SEMANTIC_WEIGHT", 0.0))
     exact_qa_threshold: float = field(default_factory=lambda: _env_float("EXACT_QA_THRESHOLD", 0.85))
     max_images_per_answer: int = field(default_factory=lambda: max(0, _env_int("MAX_IMAGES_PER_ANSWER", 2)))
@@ -528,6 +542,106 @@ def chunk_pdf_pages(
     return chunks
 
 
+# A numbered item or sub-heading: "๒.", "๒.๑", "๓.๒.๑" (Thai digits, as the
+# book prints them), preceded by whitespace and followed by whitespace.
+_SECTION_MARKER = re.compile(r"(?<=\s)[๐-๙]{1,2}(?:\.[๐-๙]{1,2})*\.?(?=\s)")
+
+
+def chunk_pdf_sections(
+    text: str,
+    source: str,
+    *,
+    max_chars: int = 700,
+    min_chars: int = 120,
+    overlap_chars: int = 120,
+) -> list[dict[str, str]]:
+    """Chunk a page-preservation dataset into runs of numbered sections of
+    at most ~max_chars, cut at sub-heading markers ("๒.", "๓.๒") and page
+    boundaries. A whole page mixes several topics (page ๕๒ holds the
+    Algorithm definition, good-algorithm traits, flowcharts and program
+    structures), which dilutes its TF-IDF vector until none of those
+    questions retrieve it; section-sized chunks keep one topic each.
+
+    Each chunk keeps its "body" (own text) and "lead" (heading tail carried
+    over from the previous chunk) apart from the indexed "text", so
+    KnowledgeBase.retrieve can join a hit with the chunk after it: lists
+    often run past a chunk or page boundary (SDLC's five phases span pages
+    ๕๗-๕๘, and only the first chunk says "SDLC")."""
+    pages = extract_pdf_pages(text)
+    offset = _printed_page_offset(pages)
+
+    def is_front_matter(page_number: int) -> bool:
+        return offset is None or page_number - offset < 1
+
+    # (page_number, text) segments, split at section markers within each page.
+    segments: list[tuple[int, str]] = []
+    for page_number, page_text in pages:
+        cuts = [0] + [m.start() for m in _SECTION_MARKER.finditer(page_text)] + [len(page_text)]
+        for start, end in zip(cuts, cuts[1:]):
+            piece = page_text[start:end].strip()
+            # Split a section longer than max_chars at whitespace.
+            while len(piece) > max_chars:
+                split_at = piece.rfind(" ", min_chars, max_chars)
+                split_at = split_at if split_at > 0 else max_chars
+                segments.append((page_number, piece[:split_at].strip()))
+                piece = piece[split_at:].strip()
+            if piece:
+                segments.append((page_number, piece))
+
+    def make_chunk(group: list[tuple[int, str]]) -> dict[str, str]:
+        page_numbers = sorted({page for page, _ in group})
+        printed = [p - offset for p in page_numbers if offset is not None and p - offset >= 1]
+        return {
+            "source": source,
+            "text": " ".join(piece for _, piece in group),
+            # PDF page index -- what image_map.json pages refer to.
+            "page_range": _format_range(page_numbers),
+            # Number printed on the page itself, used for citations; empty
+            # for front matter (cover, contents), which has no page number.
+            "page_label": _format_range(printed) if printed else "",
+        }
+
+    groups: list[list[tuple[int, str]]] = []
+    current: list[tuple[int, str]] = []
+    for page_number, piece in segments:
+        size = sum(len(p) + 1 for _, p in current)
+        crosses_front_matter = bool(current) and is_front_matter(current[-1][0]) != is_front_matter(page_number)
+        # A list restarting at "๑." usually starts a new topic.
+        new_list = piece.startswith("๑. ")
+        if current and (
+            crosses_front_matter
+            or (size >= min_chars and (new_list or size + len(piece) > max_chars))
+        ):
+            groups.append(current)
+            current = []
+        current.append((page_number, piece))
+    if current:
+        groups.append(current)
+
+    def same_side(a: list[tuple[int, str]], b: list[tuple[int, str]]) -> bool:
+        return is_front_matter(a[-1][0]) == is_front_matter(b[0][0])
+
+    # Unnumbered headings ("ประโยชน์ของผังงาน", "Interpreter") sit just before
+    # the list they introduce, so they end the previous chunk. Starting each
+    # chunk with the previous chunk's last few words carries them over.
+    def heading_tail(group: list[tuple[int, str]]) -> str:
+        text = " ".join(piece for _, piece in group)
+        cut = text.find(" ", max(0, len(text) - overlap_chars))
+        return text[cut + 1:] if cut >= 0 else ""
+
+    chunks = []
+    for index, group in enumerate(groups):
+        previous = groups[index - 1] if index > 0 and same_side(groups[index - 1], group) else []
+        chunk = make_chunk(group)
+        chunk["body"] = chunk["text"]
+        chunk["lead"] = heading_tail(previous) if previous else ""
+        chunk["text"] = f"{chunk['lead']} {chunk['body']}".strip()
+        # retrieve() never joins chunks across the front-matter boundary.
+        chunk["side"] = "front" if is_front_matter(group[0][0]) else "body"
+        chunks.append(chunk)
+    return chunks
+
+
 IMAGE_MAP_PATH = APP_DIR / "image_map.json"
 
 
@@ -618,7 +732,10 @@ GENERIC_IMAGE_KEYWORDS = frozenset({
     "กระบวนการ", "ส่วนประกอบ", "องค์ประกอบ", "ขั้นตอน", "สัญลักษณ์",
     "เปรียบเทียบ", "ความสัมพันธ์", "คุณลักษณะ", "การแสดง", "การเขียน",
     "การแบ่งส่วน", "ช่วงเวลา", "ช่องทาง",
-    "data", "model", "unit", "state", "input", "two",
+    # Every gate figure has these; alone they put the NOT-gate figure on an
+    # OR-gate question. The gate's own name (AND, NOT) is the specific hit.
+    "เกต", "ลอจิก",
+    "data", "model", "unit", "state", "input", "two", "gate",
 })
 
 
@@ -772,7 +889,8 @@ def build_index(signature: tuple[Any, ...], settings: Settings | None = None) ->
     qa_pairs: list[QAPair] = []
     for document in documents:
         if is_pdf_page_preservation_dataset(document.text):
-            doc_chunks = chunk_pdf_pages(document.text, document.source)
+            chunker = chunk_pdf_pages if settings.chunk_mode == "pages" else chunk_pdf_sections
+            doc_chunks = chunker(document.text, document.source)
         else:
             doc_chunks = chunk_text(document.text, document.source)
         chunks.extend(doc_chunks)
@@ -862,8 +980,8 @@ def history_as_text(history: list[dict[str, str]] | None) -> str:
 def retrieval_queries(question: str, history: list[dict[str, str]]) -> list[str]:
     """Queries to try against the textbook, in order. A follow-up such as
     "อธิบายเพิ่มอีกหน่อย" or "มันต่างกันยังไง" has no keywords of its own, so
-    when the question alone retrieves nothing, retry with the previous user
-    question prepended."""
+    when the question alone retrieves nothing useful, retry with the previous
+    user question prepended."""
     queries = [question]
     previous = next((turn["content"] for turn in reversed(history) if turn["role"] == "user"), "")
     if previous and previous.strip() != question.strip():
@@ -1215,7 +1333,39 @@ RARE_TERM_BONUS = 0.05
 _ASCII_RUN = re.compile(r"[a-z][a-z0-9]*(?:[ \-]+[a-z][a-z0-9]*)*")
 
 
-def rare_term_bonus(query: str, lowered_texts: list[str]) -> np.ndarray:
+RARE_PHRASE_MIN_CHARS = 10
+RARE_PHRASE_MAX_CHARS = 40
+
+
+def _rare_phrase_hits(query: str, lowered_texts: list[str], pages: list[str]) -> list[np.ndarray]:
+    """Thai has no spaces to find words by, so look for the longest stretches
+    of the question (10-40 characters) that appear verbatim in the book, and
+    count those that appear on at most RARE_TERM_MAX_PAGES pages. Catches a
+    sub-heading quoted in the question: "Algorithm ที่ดี" heads one list on
+    page ๕๒, a chunk that otherwise scores low because it covers three topics."""
+    text = " ".join(query.lower().split())
+    corpus = "\x00".join(lowered_texts)
+    taken: list[tuple[int, int]] = []
+    hits: list[np.ndarray] = []
+    for length in range(min(len(text), RARE_PHRASE_MAX_CHARS), RARE_PHRASE_MIN_CHARS - 1, -1):
+        for start in range(len(text) - length + 1):
+            end = start + length
+            if any(lo <= start and end <= hi for lo, hi in taken):
+                continue
+            phrase = text[start:end]
+            if phrase != phrase.strip() or phrase not in corpus:
+                continue
+            # A longer phrase was found here; its parts say nothing new.
+            taken.append((start, end))
+            found = np.array([phrase in chunk for chunk in lowered_texts])
+            if len({pages[i] for i in np.flatnonzero(found)}) <= RARE_TERM_MAX_PAGES:
+                hits.append(found)
+    return hits
+
+
+def rare_term_bonus(query: str, lowered_texts: list[str], pages: list[str]) -> np.ndarray:
+    """`pages` names each chunk's page(s); rarity counts distinct pages, since
+    one page can be split over several chunks."""
     candidates: set[str] = set()
     for run in _ASCII_RUN.findall(query.lower()):
         words = re.split(r"[ \-]+", run)
@@ -1226,11 +1376,56 @@ def rare_term_bonus(query: str, lowered_texts: list[str]) -> np.ndarray:
     for term in candidates:
         pattern = _ascii_term_pattern(term)
         found = np.array([bool(pattern.search(text)) for text in lowered_texts])
-        if 0 < found.sum() <= RARE_TERM_MAX_PAGES:
+        if 0 < len({pages[i] for i in np.flatnonzero(found)}) <= RARE_TERM_MAX_PAGES:
             hits.append(found)
+    hits.extend(_rare_phrase_hits(query, lowered_texts, pages))
     if not hits:
         return np.zeros(len(lowered_texts))
     return RARE_TERM_BONUS * np.mean(hits, axis=0)
+
+
+def _joinable(a: dict[str, str], b: dict[str, str]) -> bool:
+    """Whether section chunk b directly continues section chunk a."""
+    return "body" in b and a["source"] == b["source"] and a.get("side") == b.get("side")
+
+
+def _merge_spans(spans: list[list[Any]], chunks: list[dict[str, str]]) -> list[list[Any]]:
+    """Merge [first, last, score] spans that overlap or touch, keeping the
+    best score."""
+    merged: list[list[Any]] = []
+    for first, last, score in sorted(spans):
+        if merged:
+            previous = merged[-1]
+            overlaps = first <= previous[1]
+            touches = first == previous[1] + 1 and _joinable(chunks[previous[1]], chunks[first])
+            if overlaps or touches:
+                previous[1] = max(previous[1], last)
+                previous[2] = max(previous[2], score)
+                continue
+        merged.append([first, last, score])
+    return merged
+
+
+def _span_passage(chunks: list[dict[str, str]], first: int, last: int, score: float) -> Passage:
+    run = chunks[first : last + 1]
+    if "body" not in run[0]:
+        text = run[0]["text"]
+    else:
+        text = " ".join([run[0]["lead"], *(chunk["body"] for chunk in run)]).strip()
+
+    def joined_range(key: str) -> str:
+        bounds = [b for chunk in run if (b := _parse_page_range(chunk.get(key, "")))]
+        if not bounds:
+            return ""
+        return _format_range([min(lo for lo, _ in bounds), max(hi for _, hi in bounds)])
+
+    return Passage(
+        source=run[0]["source"],
+        text=text,
+        score=score,
+        page_range=joined_range("page_range"),
+        page_label=joined_range("page_label"),
+    )
 
 
 class KnowledgeBase:
@@ -1293,26 +1488,31 @@ class KnowledgeBase:
             scores = (1 - weight) * keyword_scores + weight * semantic_scores
         else:
             scores = keyword_scores
-        scores = scores + rare_term_bonus(expanded_query, [chunk["text"].lower() for chunk in index.chunks])
+        scores = scores + rare_term_bonus(
+            expanded_query,
+            [chunk["text"].lower() for chunk in index.chunks],
+            [chunk.get("page_range", str(i)) for i, chunk in enumerate(index.chunks)],
+        )
 
-        ranked = np.argsort(scores)[::-1][:effective_top_k]
-
-        passages: list[Passage] = []
-        for idx in ranked:
+        # Each hit is read together with the chunk after it (see
+        # chunk_pdf_sections); hits whose spans touch are merged into one
+        # passage so no text reaches the model twice.
+        # A chunk already included as the continuation of a better hit can
+        # still be a hit itself: its own span then extends that passage (an
+        # SDLC heading ending one chunk pulls in phases 1-3; the next chunk,
+        # also a hit, pulls in phases 4-5).
+        spans: list[list[Any]] = []  # [first chunk, last chunk, best score]
+        for idx in map(int, np.argsort(scores)[::-1]):
             score = float(scores[idx])
-            if score < self.settings.min_relevance:
-                continue
-            chunk = index.chunks[idx]
-            passages.append(
-                Passage(
-                    source=chunk["source"],
-                    text=chunk["text"],
-                    score=score,
-                    page_range=chunk.get("page_range", ""),
-                    page_label=chunk.get("page_label", ""),
-                )
-            )
-        return passages
+            if score < self.settings.min_relevance or len(spans) >= effective_top_k:
+                break
+            last = idx
+            following = index.chunks[idx + 1] if idx + 1 < len(index.chunks) else None
+            if "body" in index.chunks[idx] and following and _joinable(index.chunks[idx], following):
+                last = idx + 1
+            spans = _merge_spans([*spans, [idx, last, score]], index.chunks)
+        spans.sort(key=lambda span: -span[2])
+        return [_span_passage(index.chunks, first, last, score) for first, last, score in spans]
 
 
 def resolve_api_key(name: str, override: str | None = None) -> str:
@@ -1579,11 +1779,11 @@ def answer_question(
                 "mode": "grounded",
                 "provider_used": provider_name,
             }
-        # The model judged these passages off-topic; trust that and don't
-        # retry with the previous question, which would pull the earlier
-        # topic back in (e.g. a buying-advice follow-up landing on a
-        # textbook page about computer types).
-        break
+        # The model judged these passages off-topic. With section chunks a
+        # keyword-less follow-up ("มันต่างกันยังไง") still matches some
+        # chunk on its own words, so go on to the query that includes the
+        # previous question. (Buying-advice follow-ups, which this retry
+        # used to drag back onto textbook pages, skip retrieval entirely.)
 
     # No usable passages in the dataset (either none retrieved, or the
     # grounded provider itself declined). Fall back to general computer

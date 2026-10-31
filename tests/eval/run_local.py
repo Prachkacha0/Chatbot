@@ -31,6 +31,7 @@ def summarize(r, started):
         "provider": r.get("provider_used"),
         "pages": [p.get("page") for p in r["passages"]],
         "web": [w.get("title") for w in r.get("web_sources", []) or []],
+        "images": [i["id"] for i in r.get("images", [])],
         "answer": r["answer"],
         "seconds": round(time.time() - started, 1),
     }
