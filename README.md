@@ -51,6 +51,8 @@ Chatbot/
 python tests/eval/run_local.py --sets regression,followup
 # รันกับเว็บบน Render (ชุด eval35, extra6, user30)
 python tests/eval/run_render.py
+# สร้างไฟล์ Excel เทียบรอบ 1-2-3 (ผลตรวจแต่ละข้ออยู่ใน tests/eval/grades.py)
+python tests/eval/make_report.py tests/eval/results/<ไฟล์ผล>.json test-results --tested-on "วันที่ / ที่ไหน"
 ```
 
 ## Run locally
