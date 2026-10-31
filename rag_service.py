@@ -972,6 +972,24 @@ def is_creator_question(question: str) -> bool:
     return bool(_CREATOR_WHO.search(lowered)) and any(p.search(lowered) for p in _CREATOR_PATTERNS)
 
 
+# Buying advice ("แนะนำคอมเล่นเกม", "โน้ตบุ๊กงบ 20000") is never in the
+# textbook, but its words ("คอม", "ทำงาน", "เกม") match textbook pages, and the
+# grounded model then sometimes answers from the page on microcomputers
+# instead of declining. Such questions skip the textbook outright. The
+# colloquial "คอม"/"โน้ตบุ๊ก"... + "สำหรับ" shape catches the keyword-less
+# follow-up "คอมสำหรับทำงาน"; the book's own "คอมพิวเตอร์สำหรับ..." is excluded.
+_PRODUCT = r"(?:คอม(?!พิวเตอร์|ไพ|โพ|มาน|มิว|เมนต์|แพ)|โน้ตบุ๊[กค]|โน๊ตบุ๊[กค]|notebook|laptop|แล็ปท็อป|การ์ดจอ|มือถือ|สมาร์ทโฟน|แท็บเล็ต|tablet|ไอแพด|ipad)"
+_BUYING_ADVICE = re.compile(
+    r"ซื้อ(?!ขาย)|งบ(?:ประมาณ)?\s*(?:ไม่เกิน)?\s*[\d๐-๙]|[\d,]{4,}\s*บาท|ราคา(?:เท่า|ไม่เกิน|ประมาณ|ช่วง)"
+    r"|รุ่นไหนดี|ยี่ห้อไหน|สเปก|สเป็ค|\bspecs?\b|คุ้มไหม|คุ้มค่าไหม"
+    rf"|แนะนำ.{{0,15}}?{_PRODUCT}|{_PRODUCT}\s*(?:ที่)?(?:เหมาะ)?(?:สำหรับ|ไว้)"
+)
+
+
+def is_buying_advice(question: str) -> bool:
+    return bool(_BUYING_ADVICE.search(question.lower()))
+
+
 def build_grounded_prompt(question: str, passages: list[Passage], history: list[dict[str, str]] | None) -> str:
     return (
         "RECENT CONVERSATION:\n"
@@ -1061,8 +1079,22 @@ def web_search_query(
         line = raw.strip().splitlines()[0] if raw.strip() else ""
         terms = [term.strip(" \"'`.") for term in line.split("|")]
         terms = [term[:60] for term in terms if term and term.upper() != "NONE"]
-        return terms[:2]
+        return [strip_invented_model_number(term, question) for term in terms[:2]]
     return []
+
+
+_MODEL_NUMBER_TAIL = re.compile(r"\s+\d.*$")
+
+
+def strip_invented_model_number(term: str, question: str) -> str:
+    """Drop a model number the user never typed: "iPhone 15 Pro Max" -> "iPhone".
+    With chat history in the prompt, the model sometimes ignores the "no
+    years or versions" rule and fills in the newest model it remembers, which
+    is out of date and steers the search to old articles (an iPhone question
+    after a RAM question was answered "iPhone 17 Pro" a year late)."""
+    if re.search(r"[\d๐-๙]", question):
+        return term
+    return _MODEL_NUMBER_TAIL.sub("", term) or term
 
 
 # Domain synonym pairs for this textbook's terminology. TF-IDF only matches
@@ -1083,7 +1115,7 @@ SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
     ("printer", "เครื่องพิมพ์", "ปริ๊นเตอร์"),
     ("big data", "bigdata", "บิ๊กดาต้า", "ข้อมูลขนาดใหญ่"),
     ("flash drive", "แฟลชไดรฟ์", "แฟลชไดร์ฟ"),
-    ("hard disk", "harddisk", "ฮาร์ดดิสก์", "จานบันทึกข้อมูล"),
+    ("hard disk", "harddisk", "hdd", "ฮาร์ดดิสก์", "จานบันทึกข้อมูล"),
     ("input device", "อุปกรณ์นำเข้าข้อมูล", "อุปกรณ์อินพุต"),
     ("output device", "อุปกรณ์แสดงผล", "อุปกรณ์เอาต์พุต"),
     ("binary code", "รหัสฐานสอง", "เลขฐานสอง"),
@@ -1099,7 +1131,45 @@ SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
     ("algorithm", "อัลกอริทึม", "อัลกอริธึม"),
     ("pseudocode", "pseudo code", "รหัสเทียม"),
     ("operating system", "os", "ระบบปฏิบัติการ"),
+    # The book writes "Complier", "Middle Ware" and "Link List"; users type the
+    # usual spelling or the Thai name, which shares no characters with them.
+    ("compiler", "complier", "คอมไพเลอร์"),
+    ("interpreter", "อินเทอร์พรีเตอร์", "อินเตอร์พรีเตอร์"),
+    ("middleware", "middle ware", "มิดเดิลแวร์"),
+    ("linked list", "link list", "ลิงค์ลิสต์", "ลิงก์ลิสต์"),
+    ("dbms", "database management system", "ระบบจัดการฐานข้อมูล", "ระบบจัดการข้อมูล"),
+    ("sdlc", "system development life cycle", "วงจรการพัฒนาระบบ"),
+    ("dfd", "data flow diagram", "แผนภาพกระแสข้อมูล"),
+    ("erd", "entity relationship diagram"),
+    ("data structure", "โครงสร้างข้อมูล"),
+    ("array", "อาร์เรย์", "แถวลำดับ"),
+    ("nested loop", "ลูปซ้อน", "การวนซ้ำซ้อน"),
+    ("inheritance", "การสืบทอด"),
+    ("ssd", "solid state drive"),
+    ("alu", "arithmetic and logic unit", "หน่วยคำนวณและตรรกะ"),
+    ("wan", "wide area network", "เครือข่ายบริเวณกว้าง"),
+    ("cloud computing", "คลาวด์คอมพิวติ้ง", "การประมวลผลแบบคลาวด์"),
+    ("touch screen", "touchscreen", "จอสัมผัส", "จอภาพระบบสัมผัส"),
+    ("graphic adapter", "graphics card", "การ์ดแสดงผล"),
 )
+
+# Short terms must not fire inside longer words: "ram" in "program", "os" in
+# "cost", "lan" in "plan", "เกต" in "สังเกต". English terms match only as whole
+# words; the few Thai terms that collide get explicit exclusions.
+_THAI_TERM_PATTERNS = {
+    "เกต": r"(?<!สัง)เกต(?!เวย์)",
+    "แรม": r"(?<!โรง)แรม",
+}
+
+
+def _ascii_term_pattern(term: str) -> re.Pattern[str]:
+    return re.compile(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])")
+
+
+def _synonym_term_pattern(term: str) -> re.Pattern[str]:
+    if term.isascii():
+        return _ascii_term_pattern(term)
+    return re.compile(_THAI_TERM_PATTERNS.get(term, re.escape(term)))
 
 # "คอม" is everyday shorthand for "คอมพิวเตอร์", but it can't be a normal
 # synonym group: it's a substring of the full word and of unrelated words
@@ -1110,6 +1180,7 @@ _SYNONYM_LOOKUP: dict[str, tuple[str, ...]] = {}
 for _group in SYNONYM_GROUPS:
     for _term in _group:
         _SYNONYM_LOOKUP[_term.lower()] = _group
+_SYNONYM_PATTERNS = {term: _synonym_term_pattern(term) for term in _SYNONYM_LOOKUP}
 
 
 def expand_query_with_synonyms(query: str) -> str:
@@ -1122,7 +1193,7 @@ def expand_query_with_synonyms(query: str) -> str:
     additions: list[str] = []
     seen_groups: set[tuple[str, ...]] = set()
     for term in sorted(_SYNONYM_LOOKUP, key=len, reverse=True):
-        if term in lowered:
+        if _SYNONYM_PATTERNS[term].search(lowered):
             group = _SYNONYM_LOOKUP[term]
             if group in seen_groups:
                 continue
@@ -1131,6 +1202,35 @@ def expand_query_with_synonyms(query: str) -> str:
     if not additions:
         return query
     return f"{query} {' '.join(additions)}"
+
+
+# An English term that appears on only a few pages ("DBMS", "Link List",
+# "Middle Ware") is the strongest signal a question carries, but in a short
+# query TF-IDF dilutes it below MIN_RELEVANCE -- the page defining "Link List"
+# scored 0.049. Chunks containing such a term get a flat bonus, shared out
+# when the query has several rare terms. Common words ("data", "windows")
+# appear on more pages and get nothing.
+RARE_TERM_MAX_PAGES = 3
+RARE_TERM_BONUS = 0.05
+_ASCII_RUN = re.compile(r"[a-z][a-z0-9]*(?:[ \-]+[a-z][a-z0-9]*)*")
+
+
+def rare_term_bonus(query: str, lowered_texts: list[str]) -> np.ndarray:
+    candidates: set[str] = set()
+    for run in _ASCII_RUN.findall(query.lower()):
+        words = re.split(r"[ \-]+", run)
+        candidates.update(word for word in words if len(word) >= 3)
+        candidates.update(f"{a} {b}" for a, b in zip(words, words[1:]))
+
+    hits = []
+    for term in candidates:
+        pattern = _ascii_term_pattern(term)
+        found = np.array([bool(pattern.search(text)) for text in lowered_texts])
+        if 0 < found.sum() <= RARE_TERM_MAX_PAGES:
+            hits.append(found)
+    if not hits:
+        return np.zeros(len(lowered_texts))
+    return RARE_TERM_BONUS * np.mean(hits, axis=0)
 
 
 class KnowledgeBase:
@@ -1193,6 +1293,7 @@ class KnowledgeBase:
             scores = (1 - weight) * keyword_scores + weight * semantic_scores
         else:
             scores = keyword_scores
+        scores = scores + rare_term_bonus(expanded_query, [chunk["text"].lower() for chunk in index.chunks])
 
         ranked = np.argsort(scores)[::-1][:effective_top_k]
 
@@ -1412,7 +1513,8 @@ def answer_question(
             "provider_used": "dataset",
         }
 
-    for retrieval_query in retrieval_queries(question, chat_history):
+    queries = [] if is_buying_advice(question) else retrieval_queries(question, chat_history)
+    for retrieval_query in queries:
         passages = kb.retrieve(retrieval_query, top_k=top_k)
         if not passages:
             continue

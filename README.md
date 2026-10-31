@@ -5,6 +5,9 @@
 ## Features
 
 - **RAG retrieval**: ค้นหาข้อมูลจาก knowledge base ด้วย TF-IDF (keyword) พร้อมขยายคำค้นด้วยพจนานุกรมคำพ้องความหมาย แล้วส่ง context ให้ LLM ตอบ พร้อมแหล่งอ้างอิง — รองรับ semantic embedding (Gemini) เป็นตัวเลือกเสริมผ่าน `SEMANTIC_WEIGHT` (ปิดไว้เป็นค่าเริ่มต้น)
+  - **คำพ้อง/ตัวย่อ** (`SYNONYM_GROUPS`): จับคู่คำที่ผู้ใช้พิมพ์กับคำที่ตำราใช้ เช่น DBMS ↔ Database Management System ↔ ระบบจัดการฐานข้อมูล, Compiler ↔ Complier (ตำราสะกดแบบนี้), Middleware ↔ Middle Ware, Linked List ↔ Link List คำย่อภาษาอังกฤษต้องเป็นคำเดี่ยว ("ram" ใน "program" ไม่นับ)
+  - **คำเฉพาะที่หายาก**: คำภาษาอังกฤษในคำถามที่ปรากฏในตำราไม่เกิน 3 หน้า (เช่น DBMS, SDLC, Link List) ได้คะแนนเพิ่ม 0.05 ให้หน้าที่มีคำนั้น (`RARE_TERM_BONUS`) เพราะคำถามสั้นๆ ทำให้คะแนน TF-IDF ของคำสำคัญถูกเจือจางจนต่ำกว่า `MIN_RELEVANCE`
+- **คำถามขอคำแนะนำซื้อของ** (แนะนำคอม/งบ/ราคาเท่าไหร่/รุ่นไหนดี/สเปก หรือ "คอมสำหรับทำงาน"): ข้ามการค้นตำราไปตอบแบบความรู้ทั่วไปเลย เพราะตำราไม่มีเรื่องนี้แต่คำอย่าง "คอม" "ทำงาน" ไปตรงกับหน้าตำราได้
 - **Dual provider**: Typhoon เป็นตัวหลักทั้งคำถามอิงเอกสารและคำถามนอกตำรา, Gemini เป็นตัวสำรองเมื่อ Typhoon ใช้ไม่ได้ (ตั้งค่าได้)
 - **Markdown rendering**: คำตอบ render markdown ได้ (bold, bullet, code block ฯลฯ)
 - **Dark / light mode**: สลับโหมดสว่าง-มืด จำค่าไว้ใน localStorage
@@ -34,7 +37,19 @@ Chatbot/
 ├── .env                 # API keys (ไม่ commit)
 ├── .env.example         # Template
 ├── render.yaml          # Render deploy config
-└── data/                # ไฟล์ความรู้ (.txt, .md, .json, .pdf)
+├── data/                # ไฟล์ความรู้ (.txt, .md, .json, .pdf)
+└── tests/eval/          # ชุดคำถามทดสอบ + สคริปต์รัน (ผลลัพธ์อยู่ใน tests/eval/results/ ไม่ commit)
+```
+
+## Evaluation
+
+ชุดคำถามอยู่ใน `tests/eval/questions.py`: regression 32 ข้อ, follow-up 12 ข้อ, ชุดงานในคลาส 35 ข้อ + เพิ่มเติม 6 ข้อ, ผู้ใช้ทั่วไป 30 ข้อ (เรียก API จริง ใช้ quota ของ Typhoon/Gemini)
+
+```powershell
+# รันกับโค้ดในเครื่อง (ทุกชุด หรือเลือกด้วย --sets)
+python tests/eval/run_local.py --sets regression,followup
+# รันกับเว็บบน Render (ชุด eval35, extra6, user30)
+python tests/eval/run_render.py
 ```
 
 ## Run locally

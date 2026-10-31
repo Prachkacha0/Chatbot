@@ -10,6 +10,9 @@ venv/
 # Claude Code local session state
 .claude/scheduled_tasks.lock
 
+# Evaluation run outputs (answers are regenerated on every run)
+tests/eval/results/
+
 # Local dev server logs
 server_stdout.log
 server_stderr.log
